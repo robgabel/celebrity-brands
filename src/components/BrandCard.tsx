@@ -39,7 +39,7 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
 
   return (
     <div 
-      className="bg-gray-900 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-800 cursor-pointer"
+      className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden border border-gray-700/50 cursor-pointer hover:border-gray-600/50"
       onClick={handleCardClick}
     >
       <div className="p-6">
@@ -58,7 +58,7 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
         </div>
 
         <div className="space-y-2">
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-teal-400/10 text-teal-400 rounded-full">
+          <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20">
             {brand.product_category}
           </span>
           <p className="text-gray-300">{brand.description}</p>
