@@ -39,7 +39,7 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
 
   return (
     <div 
-      className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden border border-gray-700/50 cursor-pointer hover:border-gray-600/50"
+      className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-700/50 cursor-pointer hover:border-gray-600/50"
       onClick={handleCardClick}
     >
       <div className="p-6">
@@ -48,7 +48,7 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
             <h3 className="text-xl font-semibold text-gray-100">{brand.name}</h3>
             <p className="text-gray-400">{brand.creators}</p>
           </div>
-          <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center space-x-2 relative" onClick={e => e.stopPropagation()}>
             <FavoriteButton
               brandId={brand.id}
               initialFavorited={isFavorited}
