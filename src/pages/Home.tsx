@@ -137,47 +137,26 @@ export function HomePage() {
               placeholder="Search brands, celebrities, or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-24 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-lg"
+              className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-32 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <Search 
-              className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" 
-              size={20} 
+              className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" 
+              size={24} 
             />
             <button 
               type="submit" 
-              className="absolute right-3 top-2.5 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full transition-colors text-lg"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full transition-colors"
             >
               Search
             </button>
           </form>
           
-          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 sm:mt-6">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
             <Link 
               to="/explore" 
               className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
             >
               Browse All
-            </Link>
-            <span className="text-gray-700">•</span>
-            <Link 
-              to="/explore?category=Food+%26+Soft+Drinks" 
-              className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
-            >
-              Food & Drinks
-            </Link>
-            <span className="text-gray-700">•</span>
-            <Link 
-              to="/explore?category=Beauty+%26+Personal+Care" 
-              className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
-            >
-              Beauty
-            </Link>
-            <span className="text-gray-700">•</span>
-            <Link 
-              to="/explore?founderType=Content+Creator" 
-              className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
-            >
-              Content Creators
             </Link>
           </div>
         </section>
