@@ -32,6 +32,7 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
   const handleCardClick = (e: MouseEvent) => {
     // Don't navigate if clicking buttons or links
     if (!(e.target as HTMLElement).closest('button')) {
+      window.scrollTo(0, 0);
       navigate(`/brands/${brand.id}`);
     }
   };

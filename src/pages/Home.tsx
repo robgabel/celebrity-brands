@@ -152,11 +152,8 @@ export function HomePage() {
           </form>
           
           <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
-            <Link 
-              to="/explore" 
-              className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
-            >
-              Browse All
+            <Link to="/explore" className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base">
+              Or Browse All
             </Link>
           </div>
         </section>
