@@ -18,67 +18,71 @@ async function delay(ms: number) {
 }
 
 export async function getBrandTrends(brandName: string): Promise<TrendResponse> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
-    try {
-      console.log(`Fetching trends for "${brandName}" (attempt ${attempt}/${RETRY_ATTEMPTS})`);
-      
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trends`;
-      const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Accept': 'application/json'
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY = 2000;
+
+  try {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Fetching trends for "${brandName}" (attempt ${attempt + 1}/${MAX_RETRIES})`);
+
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trends`;
+        const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error ${response.status}`);
         }
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
-      }
+        const data = await response.json();
+        console.log('Successfully received trends data');
 
-      const data = await response.json();
-      console.log('Successfully received trends data');
+        return data;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Attempt ${attempt + 1} failed:`, error);
 
-      return data;
-    } catch (error: any) {
-      lastError = error;
-      console.error(`Attempt ${attempt} failed:`, {
-        error: error.message,
-        query: brandName
-      });
+        // Don't retry on rate limit errors
+        if (error.message?.includes('rate limit') || error.message?.includes('429')) {
+          throw new Error('Rate limit exceeded. Please try again in a minute.');
+        }
 
-      // Don't retry on certain errors
-      if (error.message.includes('rate limit') || error.message.includes('429')) {
-        throw new Error('Rate limit exceeded. Please try again in a minute.');
-      }
-      
-      // Retry on temporary service unavailability
-      if (attempt < RETRY_ATTEMPTS && (
-        error.message.includes('temporarily unavailable') || 
-        error.message.includes('Service temporarily unavailable') ||
-        error.message.includes('503') ||
-        error.message.includes('502')
-      )) {
-        const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1);
-        console.log(`Service temporarily unavailable. Retrying in ${backoffDelay}ms...`);
-        await delay(backoffDelay);
-        continue;
-      }
-
-      // If this isn't our last attempt, wait before retrying
-      if (attempt < RETRY_ATTEMPTS) {
-        const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1);
-        await delay(backoffDelay);
-        continue;
+        // If not the last attempt, wait before retrying
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          continue;
+        }
       }
     }
-  }
 
-  // If we get here, all attempts failed
-  throw new Error(
-    lastError?.message.includes('temporarily unavailable')
-      ? 'The trends service is temporarily unavailable. Please try again in a few minutes.'
-      : 'Unable to fetch trend data after multiple attempts. Please try again later.'
-  );
+    // If we get here, all attempts failed
+    if (lastError) {
+      throw lastError;
+    }
+
+    throw new Error('Failed to fetch trend data after multiple attempts');
+  } catch (error: any) {
+    console.error('Error fetching trends:', {
+      error: error.message,
+      brandName
+    });
+
+    // Return user-friendly error messages
+    if (error.message.includes('rate limit') || error.message.includes('429')) {
+      throw new Error('Rate limit exceeded. Please try again in a minute.');
+    }
+
+    if (error.message.includes('timeout') || error.message.includes('504')) {
+      throw new Error('Request timed out. Please try again.');
+    }
+
+    throw new Error('Unable to fetch trend data. Please try again later.');
+  }
 }
