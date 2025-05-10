@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, MessageSquare, Flag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from './Button';
@@ -23,9 +24,17 @@ interface BrandCardProps {
 }
 
 export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardProps) {
+  const navigate = useNavigate();
   const [isCommenting, setIsCommenting] = useState(false);
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
+
+  const handleCardClick = (e: MouseEvent) => {
+    // Don't navigate if clicking buttons or links
+    if (!(e.target as HTMLElement).closest('button')) {
+      navigate(`/brands/${brand.id}`);
+    }
+  };
 
   const handleFavorite = async () => {
     try {
@@ -106,14 +115,17 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
   };
 
   return (
-    <div className="bg-gray-900 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-800">
+    <div 
+      className="bg-gray-900 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 overflow-hidden border border-gray-800 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-xl font-semibold text-gray-100">{brand.name}</h3>
             <p className="text-gray-400">{brand.creators}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
             <button
               onClick={handleFavorite}
               className={`p-2 rounded-full transition-colors duration-200 ${
