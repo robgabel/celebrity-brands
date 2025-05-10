@@ -135,7 +135,7 @@ export function HomePage() {
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
             <input
               type="text"
-              placeholder="Search brands, celebrities, or categories..."
+              placeholder="Search brands..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-32 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -153,8 +153,11 @@ export function HomePage() {
           </form>
           
           <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
-            <Link to="/explore" className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base">
-              Or Browse All
+            <Link 
+              to="/explore" 
+              className="text-teal-400 hover:text-teal-300 transition-colors text-sm md:text-base font-medium"
+            >
+              Browse All Brands
             </Link>
           </div>
         </section>
