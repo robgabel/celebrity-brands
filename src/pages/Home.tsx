@@ -126,7 +126,7 @@ export function HomePage() {
         {/* Hero Section */}
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
-            Discovery and Track<br />
+            Discover and Track<br />
             Celebrity-Owned Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
