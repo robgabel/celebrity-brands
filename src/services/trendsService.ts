@@ -10,7 +10,7 @@ export interface TrendResponse {
   minInterest: number;
 }
 
-const RETRY_ATTEMPTS = 3;
+const RETRY_ATTEMPTS = 5; // Increased from 3 to 5 for temporary service issues
 const RETRY_DELAY = 1000; // 1 second
 
 async function delay(ms: number) {
@@ -53,6 +53,19 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
         throw new Error('Rate limit exceeded. Please try again in a minute.');
       }
       
+      // Retry on temporary service unavailability
+      if (attempt < RETRY_ATTEMPTS && (
+        error.message.includes('temporarily unavailable') || 
+        error.message.includes('Service temporarily unavailable') ||
+        error.message.includes('503') ||
+        error.message.includes('502')
+      )) {
+        const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1);
+        console.log(`Service temporarily unavailable. Retrying in ${backoffDelay}ms...`);
+        await delay(backoffDelay);
+        continue;
+      }
+
       // If this isn't our last attempt, wait before retrying
       if (attempt < RETRY_ATTEMPTS) {
         const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1);
@@ -63,5 +76,9 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
   }
 
   // If we get here, all attempts failed
-  throw new Error('Unable to fetch trend data after multiple attempts. Please try again later.');
+  throw new Error(
+    lastError?.message.includes('temporarily unavailable')
+      ? 'The trends service is temporarily unavailable. Please try again in a few minutes.'
+      : 'Unable to fetch trend data after multiple attempts. Please try again later.'
+  );
 }
