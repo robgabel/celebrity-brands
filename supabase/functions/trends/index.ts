@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { default as googleTrends } from 'npm:google-trends-api@4.9.2';
 
-// Cache configuration
-const CACHE_TTL = 3600; // 1 hour in seconds
+// Cache and rate limiting configuration
+const CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
 const cache = new Map<string, { data: string; timestamp: number }>();
 
 const corsHeaders = {
@@ -12,16 +12,16 @@ const corsHeaders = {
 };
 
 // Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
-const MAX_REQUESTS = 5; // Maximum requests per window
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
+const MAX_REQUESTS = 10; // Maximum requests per window
 const requestLog = new Map<string, number[]>();
 
 // Exponential backoff configuration
-const INITIAL_RETRY_DELAY = 1000; // 1 second
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
 const MAX_RETRY_DELAY = 30000; // 30 seconds
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 3;
 const JITTER_MAX = 1000; // Maximum jitter in milliseconds
-const REQUEST_TIMEOUT = 15000; // 15 second timeout
+const REQUEST_TIMEOUT = 20000; // 20 second timeout
 
 function addJitter(delay: number): number {
   return delay + Math.random() * JITTER_MAX;
@@ -46,13 +46,18 @@ function logRequest(clientId: string) {
 
 async function fetchWithRetry(query: string, retryCount = 0): Promise<string> {
   try {
+    console.log(`Attempt ${retryCount + 1}/${MAX_RETRIES} for query: "${query}"`);
+
     // Wrap the API call in a Promise.race with a timeout
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Request timed out')), REQUEST_TIMEOUT);
     });
 
+    // Clean and format the query
+    const cleanQuery = query.trim().replace(/^["']|["']$/g, '');
+
     const apiPromise = googleTrends.interestOverTime({
-      keyword: query,
+      keyword: cleanQuery,
       startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // Last 12 months
       geo: 'US',
       timezone: 0,
@@ -62,14 +67,18 @@ async function fetchWithRetry(query: string, retryCount = 0): Promise<string> {
     const result = await Promise.race([apiPromise, timeoutPromise]) as string;
 
     // Validate the response format
-    const parsed = JSON.parse(result);
-    if (!parsed?.default?.timelineData) {
+    try {
+      const parsed = JSON.parse(result);
+      if (!parsed?.default?.timelineData) {
+        throw new Error('Invalid response format from Google Trends API');
+      }
+    } catch (parseError) {
       throw new Error('Invalid response format from Google Trends API');
     }
 
     return result;
   } catch (error) {
-    console.error(`Attempt ${retryCount + 1} failed:`, error);
+    console.error(`Attempt ${retryCount + 1} failed for "${query}":`, error);
 
     // Check for specific error conditions that warrant a retry
     const shouldRetry = (
@@ -88,7 +97,7 @@ async function fetchWithRetry(query: string, retryCount = 0): Promise<string> {
     if (shouldRetry) {
       const baseDelay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, retryCount), MAX_RETRY_DELAY);
       const delay = addJitter(baseDelay);
-      console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+      console.log(`Retrying "${query}" in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return fetchWithRetry(query, retryCount + 1);
     }
@@ -105,14 +114,14 @@ async function fetchWithRetry(query: string, retryCount = 0): Promise<string> {
 async function fetchTrendsData(query: string): Promise<string> {
   try {
     // Check cache first
-    const cacheKey = query.toLowerCase();
+    const cacheKey = query.toLowerCase().trim();
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL * 1000) {
       console.log('Returning cached data for:', query);
       return cached.data;
     }
 
-    console.log('Fetching fresh data for:', query);
+    console.log('Cache miss, fetching fresh data for:', query);
     const result = await fetchWithRetry(query);
 
     // Cache the result
@@ -128,7 +137,7 @@ async function fetchTrendsData(query: string): Promise<string> {
     let errorMessage: string;
     let statusCode: number;
     
-    if (error.message?.includes('quota')) {
+    if (error.message?.includes('quota') || error.message?.includes('429')) {
       errorMessage = 'API rate limit exceeded. Please try again in 60 seconds.';
       statusCode = 429;
     } else if (error.message?.includes('stringify')) {
@@ -167,6 +176,7 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const query = url.searchParams.get('query');
     const clientId = req.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
 
     if (!query) {
       return new Response(
@@ -186,6 +196,7 @@ serve(async (req: Request) => {
 
     // Check rate limit
     if (isRateLimited(clientId)) {
+      console.log(`Rate limit exceeded for client ${clientId} (${userAgent})`);
       return new Response(
         JSON.stringify({
           error: 'Rate limit exceeded. Please wait before making another request.',
@@ -206,11 +217,9 @@ serve(async (req: Request) => {
     // Log the request
     logRequest(clientId);
 
-    // Clean the query and add quotes for exact match
-    const cleanQuery = `"${query.replace(/[^\w\s]/g, '').trim()}"`;
-    console.log('Searching for:', cleanQuery);
+    console.log(`Processing request for "${query}" from ${clientId} (${userAgent})`);
 
-    const result = await fetchTrendsData(cleanQuery);
+    const result = await fetchTrendsData(query);
     const parsedData = JSON.parse(result);
 
     // Transform the data
@@ -236,7 +245,7 @@ serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': `public, max-age=${CACHE_TTL}`,
       },
     });
   } catch (error) {
