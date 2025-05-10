@@ -3,7 +3,7 @@ import { Twitter, Instagram, Linkedin, Github } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 border-t border-gray-800 py-12 px-4">
+    <footer className="bg-gradient-to-t from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm border-t border-gray-800/50 py-12 px-4">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand Section */}
         <div className="space-y-4">
@@ -109,7 +109,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800">
+      <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800/50">
         <p className="text-center text-gray-500 text-sm">
           © {new Date().getFullYear()} Celebrity Brands. All rights reserved.
         </p>
