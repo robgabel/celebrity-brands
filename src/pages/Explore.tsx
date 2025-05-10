@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Grid3X3, List } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '../lib/supabase';
