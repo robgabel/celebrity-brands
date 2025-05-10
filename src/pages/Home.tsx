@@ -131,13 +131,13 @@ export function HomePage() {
             Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities and influencers.
           </p>
           
-          <form onSubmit={handleSearch} className="max-w-md mx-auto relative px-4">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
             <input
               type="text"
               placeholder="Search brands, celebrities, or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 sm:h-14 rounded-full bg-gray-900 border border-gray-700 px-4 sm:px-6 pl-12 sm:pl-14 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
+              className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-24 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-lg"
             />
             <Search 
               className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" 
@@ -145,7 +145,7 @@ export function HomePage() {
             />
             <button 
               type="submit" 
-              className="absolute right-5 top-1/2 -translate-y-1/2 bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-colors text-sm sm:text-base"
+              className="absolute right-3 top-2.5 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full transition-colors text-lg"
             >
               Search
             </button>
