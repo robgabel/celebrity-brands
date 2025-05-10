@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCallback } from 'react';
 
 interface FavoriteButtonProps {
   brandId: number;
@@ -20,6 +21,22 @@ export function FavoriteButton({
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const clearError = useCallback(() => {
+    setError('');
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: number;
+    if (error) {
+      timeoutId = window.setTimeout(clearError, 5000);
+    }
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [error, clearError]);
 
   useEffect(() => {
     checkAuth();
@@ -122,7 +139,7 @@ export function FavoriteButton({
         fill={isFavorited ? 'currentColor' : 'none'}
       />
       {error && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 px-3 py-1.5 bg-red-900/50 text-red-100 text-xs rounded-lg whitespace-nowrap border border-red-800 z-[100] shadow-lg backdrop-blur-sm">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-3 py-1.5 bg-red-900/50 text-red-100 text-xs rounded-lg whitespace-nowrap border border-red-800 z-[100] shadow-lg backdrop-blur-sm">
           {error}
         </div>
       )}
