@@ -112,34 +112,34 @@ export function HomePage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero Section */}
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-6 max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
             Discover and Track Celebrity-Owned Brands
           </h1>
-          <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-8">
+          <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
             Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities and influencers.
           </p>
           
-          <form onSubmit={handleSearch} className="max-w-md mx-auto relative">
+          <form onSubmit={handleSearch} className="max-w-md mx-auto relative px-4">
             <input
               type="text"
               placeholder="Search brands, celebrities, or categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full h-12 sm:h-14 rounded-full bg-gray-900 border border-gray-700 px-4 sm:px-6 pl-12 sm:pl-14 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
             />
             <Search 
-              className="absolute left-5 top-4 text-gray-500" 
-              size={24} 
+              className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" 
+              size={20} 
             />
             <button 
               type="submit" 
-              className="absolute right-3 top-3 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-full transition-colors"
+              className="absolute right-5 top-1/2 -translate-y-1/2 bg-teal-600 hover:bg-teal-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-colors text-sm sm:text-base"
             >
               Search
             </button>
           </form>
           
-          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 sm:mt-6">
             <Link 
               to="/explore" 
               className="text-gray-400 hover:text-teal-400 transition-colors text-sm md:text-base"
@@ -172,8 +172,8 @@ export function HomePage() {
         
         {/* Featured Brands */}
         <section className="mb-16">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-100">Featured Brands</h2>
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Featured Brands</h2>
             <Link 
               to="/explore" 
               className="text-teal-400 hover:text-teal-300 transition-colors"
@@ -196,8 +196,8 @@ export function HomePage() {
         
         {/* Categories */}
         <section className="mb-16">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-100">Browse by Category</h2>
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Browse by Category</h2>
             <Link 
               to="/explore" 
               className="text-teal-400 hover:text-teal-300 transition-colors"
@@ -227,8 +227,8 @@ export function HomePage() {
         
         {/* Recently Added */}
         <section className="mb-16">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-100 flex items-center gap-2">
               <Calendar className="text-teal-400" size={24} />
               Recently Added Brands
             </h2>
@@ -247,23 +247,23 @@ export function HomePage() {
         </section>
         
         {/* Call to Action */}
-        <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 text-center mb-8 border border-gray-700/50">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-4">
+        <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 sm:p-8 text-center mb-8 border border-gray-700/50">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-100 mb-3 sm:mb-4">
             Ready to Track Your Favorite Brands?
           </h2>
-          <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
+          <p className="text-gray-400 mb-4 sm:mb-6 max-w-2xl mx-auto text-sm sm:text-base">
             Create an account to favorite brands, set goals, and join the community of brand enthusiasts.
           </p>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
             <Link 
               to="/signup" 
-              className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
             >
               Create Account
             </Link>
             <Link 
               to="/explore" 
-              className="px-6 py-3 border border-teal-600 text-teal-400 hover:bg-teal-600 hover:text-white rounded-lg transition-colors font-medium"
+              className="px-4 sm:px-6 py-2 sm:py-3 border border-teal-600 text-teal-400 hover:bg-teal-600 hover:text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
             >
               Explore Brands
             </Link>
