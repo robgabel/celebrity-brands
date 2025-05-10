@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { BrandCard } from '../components/BrandCard';
 import { getCategoryIcon } from '../lib/categoryUtils';
 import { GlobalNav } from '../components/GlobalNav';
+import { Footer } from '../components/Footer';
 import type { Brand } from '../types/brand';
 
 export function HomePage() {
@@ -260,6 +261,7 @@ export function HomePage() {
           </section>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

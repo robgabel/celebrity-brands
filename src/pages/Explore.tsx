@@ -10,6 +10,7 @@ import { usePagination } from '../hooks/usePagination';
 import { getCategoryColor, getCategoryIcon } from '../lib/categoryUtils';
 import { isWithinDays } from '../lib/dateUtils';
 import { GlobalNav } from '../components/GlobalNav';
+import { Footer } from '../components/Footer';
 import type { Brand } from '../types/brand';
 
 export function ExplorePage() {
@@ -543,6 +544,7 @@ export function ExplorePage() {
           </>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
