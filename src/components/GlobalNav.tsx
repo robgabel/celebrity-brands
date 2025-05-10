@@ -42,24 +42,12 @@ export function GlobalNav({
           <Link to="/" className="text-xl font-bold text-gray-100">
             Celebrity Brands
           </Link>
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center">
             <Link 
               to="/explore" 
               className="text-gray-300 hover:text-gray-100 transition-colors"
             >
               Explore
-            </Link>
-            <Link 
-              to="/categories" 
-              className="text-gray-300 hover:text-gray-100 transition-colors"
-            >
-              Categories
-            </Link>
-            <Link 
-              to="/trending" 
-              className="text-gray-300 hover:text-gray-100 transition-colors"
-            >
-              Trending
             </Link>
           </nav>
         </div>
