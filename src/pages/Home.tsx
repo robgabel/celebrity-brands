@@ -14,8 +14,10 @@ export function HomePage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
+    checkAuth();
     const fetchHomeData = async () => {
       try {
         setLoading(true);
@@ -67,6 +69,16 @@ export function HomePage() {
     
     fetchHomeData();
   }, []);
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    } catch (err) {
+      console.error('Auth check failed:', err);
+      setIsAuthenticated(false);
+    }
+  };
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,29 +258,31 @@ export function HomePage() {
           </div>
         </section>
         
-        {/* Call to Action */}
-        <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 sm:p-8 text-center mb-8 border border-gray-700/50">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-100 mb-3 sm:mb-4">
-            Ready to Track Your Favorite Brands?
-          </h2>
-          <p className="text-gray-400 mb-4 sm:mb-6 max-w-2xl mx-auto text-sm sm:text-base">
-            Create an account to favorite brands, set goals, and join the community of brand enthusiasts.
-          </p>
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Link 
-              to="/signup" 
-              className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
-            >
-              Create Account
-            </Link>
-            <Link 
-              to="/explore" 
-              className="px-4 sm:px-6 py-2 sm:py-3 border border-teal-600 text-teal-400 hover:bg-teal-600 hover:text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
-            >
-              Explore Brands
-            </Link>
-          </div>
-        </section>
+        {/* Call to Action - Only shown to non-authenticated users */}
+        {!isAuthenticated && (
+          <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 text-center mb-8 border border-gray-700/50">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-4">
+              Ready to Track Your Favorite Brands?
+            </h2>
+            <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
+              Create an account to favorite brands, set goals, and join the community of brand enthusiasts.
+            </p>
+            <div className="flex flex-col md:flex-row gap-4 justify-center">
+              <Link 
+                to="/signup" 
+                className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Create Account
+              </Link>
+              <Link 
+                to="/explore" 
+                className="px-6 py-3 border border-teal-600 text-teal-400 hover:bg-teal-600 hover:text-white rounded-lg transition-colors font-medium"
+              >
+                Explore Brands
+              </Link>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
