@@ -216,7 +216,7 @@ export function HomePage() {
                   className="bg-gray-800/50 hover:bg-gray-700/50 transition-colors p-4 rounded-lg border border-gray-700/50 flex items-center gap-3"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center text-teal-400">
-                    <Icon className="w-6 h-6" />
+                    {Icon && <Icon className="w-6 h-6" />}
                   </div>
                   <span className="text-gray-200 font-medium">{category}</span>
                 </Link>

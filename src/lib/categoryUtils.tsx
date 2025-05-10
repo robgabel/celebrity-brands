@@ -13,7 +13,6 @@ import {
   Baby,
   X
 } from 'lucide-react';
-import React from 'react';
 
 // Utility functions for handling brand categories
 export const getCategoryColor = (category: string) => {
@@ -92,33 +91,33 @@ export const getCategoryColor = (category: string) => {
   };
 };
 
-export const getCategoryIcon = (category: string): React.ReactNode => {
+export const getCategoryIcon = (category: string) => {
   switch (category) {
     case 'Fashion & Apparel':
-      return <Shirt className="w-6 h-6" />;
+      return Shirt;
     case 'Alcoholic Beverages':
-      return <Wine className="w-6 h-6" />;
+      return Wine;
     case 'Entertainment & Media':
-      return <Music className="w-6 h-6" />;
+      return Music;
     case 'Food & Soft Drinks':
-      return <Package className="w-6 h-6" />;
+      return Package;
     case 'Beauty & Personal Care':
     case 'Beauty & Personal Care (Fragrance)':
-      return <Sparkles className="w-6 h-6" />;
+      return Sparkles;
     case 'Sports & Esports':
-      return <Gamepad2 className="w-6 h-6" />;
+      return Gamepad2;
     case 'Health & Fitness':
-      return <Dumbbell className="w-6 h-6" />;
+      return Dumbbell;
     case 'Home & Lifestyle':
-      return <HomeIcon className="w-6 h-6" />;
+      return HomeIcon;
     case 'Cannabis & CBD':
-      return <Cannabis className="w-6 h-6" />;
+      return Cannabis;
     case 'Tech & Electronics':
     case 'Tech & Software':
-      return <Laptop className="w-6 h-6" />;
+      return Laptop;
     case 'Toys, Games & Children\'s Products':
-      return <Baby className="w-6 h-6" />;
+      return Baby;
     default:
-      return <ShoppingBag className="w-6 h-6" />;
+      return ShoppingBag;
   }
 };
