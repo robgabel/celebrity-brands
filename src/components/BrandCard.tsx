@@ -129,8 +129,10 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
           <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
             <button
               onClick={handleFavorite}
-                  ? 'text-teal-400 hover:bg-gray-800' 
-                  : 'text-gray-500 hover:bg-gray-800'
+              className={`p-2 rounded-full transition-colors duration-200 ${
+                isFavorited 
+                  ? 'text-teal-400 hover:bg-gray-800/50' 
+                  : 'text-gray-500 hover:bg-gray-800/50'
               }`}
               aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
             >
@@ -138,14 +140,14 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
             </button>
             <button
               onClick={() => setIsCommenting(!isCommenting)}
-              className="p-2 rounded-full text-gray-500 hover:bg-gray-800 transition-colors duration-200"
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-800/50 transition-colors duration-200"
               aria-label="Comment"
             >
               <MessageSquare className="w-5 h-5" />
             </button>
             <button
               onClick={handleReport}
-              className="p-2 rounded-full text-gray-500 hover:bg-gray-800 transition-colors duration-200"
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-800/50 transition-colors duration-200"
               aria-label="Report"
             >
               <Flag className="w-5 h-5" />
@@ -154,7 +156,9 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm text-gray-400">{brand.product_category}</p>
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-teal-400/10 text-teal-400 rounded-full">
+            {brand.product_category}
+          </span>
           <p className="text-gray-300">{brand.description}</p>
           <p className="text-sm text-gray-400">Founded: {brand.year_founded}</p>
         </div>
