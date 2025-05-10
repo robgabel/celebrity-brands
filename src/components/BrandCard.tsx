@@ -129,8 +129,8 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
           <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
             <button
               onClick={handleFavorite}
-              className={`p-2 rounded-full transition-colors duration-200 ${
-                isFavorited ? 'text-teal-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-800'
+                  ? 'text-teal-400 hover:bg-gray-800' 
+                  : 'text-gray-500 hover:bg-gray-800'
               }`}
               aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
             >
