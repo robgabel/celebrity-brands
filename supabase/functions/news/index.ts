@@ -3,8 +3,30 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
+const MAX_REQUESTS = 10; // Maximum requests per window
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now();
+  const requests = requestLog.get(clientId) || [];
+  
+  // Remove old requests outside the window
+  const recentRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW);
+  requestLog.set(clientId, recentRequests);
+  
+  return recentRequests.length >= MAX_REQUESTS;
+}
+
+function logRequest(clientId: string) {
+  const requests = requestLog.get(clientId) || [];
+  requests.push(Date.now());
+  requestLog.set(clientId, requests);
+}
 
 const NEWS_API_URL = 'https://api.thenewsapi.com/v1/news/all';
 const NEWS_API_KEY = Deno.env.get('NEWS_API_KEY');
@@ -21,6 +43,7 @@ serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     const brandName = url.searchParams.get('brand');
+    const clientId = req.headers.get('x-forwarded-for') || 'unknown';
 
     if (!brandName) {
       throw new Error('Brand name parameter is required');
@@ -29,6 +52,27 @@ serve(async (req: Request) => {
     if (!NEWS_API_KEY) {
       throw new Error('News API key not configured');
     }
+    
+    // Check rate limit
+    if (isRateLimited(clientId)) {
+      return new Response(
+        JSON.stringify({
+          error: 'Rate limit exceeded. Please try again in a few minutes.',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Retry-After': '300'
+          }
+        }
+      );
+    }
+
+    // Log the request
+    logRequest(clientId);
 
     // Remove special characters and add quotes for exact match
     const cleanBrandName = `"${brandName.replace(/[^\w\s]/gi, '').trim()}"`;
@@ -59,8 +103,7 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify(articles), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+        'Content-Type': 'application/json'
       }
     });
   } catch (error) {
