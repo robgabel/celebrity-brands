@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
-const MAX_RETRY_DELAY = 5000; // 5 seconds
+// Enhanced retry configuration
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+const MAX_RETRY_DELAY = 10000; // 10 seconds
+const JITTER_MAX = 1000; // Maximum jitter in milliseconds
+const REQUEST_TIMEOUT = 10000; // 10 second timeout
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,29 +15,60 @@ const corsHeaders = {
 
 // Add jitter to retry delay
 function getRetryDelay(attempt: number): number {
-  const delay = Math.min(
+  const baseDelay = Math.min(
     INITIAL_RETRY_DELAY * Math.pow(2, attempt),
     MAX_RETRY_DELAY
   );
-  return delay + (Math.random() * 1000); // Add up to 1 second of jitter
+  return baseDelay + (Math.random() * JITTER_MAX);
 }
 
 async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT);
+
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, {
+        ...options,
+        signal: timeoutController.signal
+      });
+
+      clearTimeout(timeoutId);
       
       // Only retry on specific error codes
       if (response.ok || response.status === 404) {
         return response;
       }
 
-      throw new Error(`HTTP ${response.status}`);
+      // Determine if we should retry based on status code
+      const shouldRetry = [429, 500, 502, 503, 504].includes(response.status);
+      if (!shouldRetry) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      // For rate limits, use the Retry-After header if available
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        if (retryAfter) {
+          const delay = parseInt(retryAfter) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+
+      throw new Error(`Retryable error: HTTP ${response.status}`);
     } catch (error) {
       console.error(`Attempt ${attempt + 1} failed:`, error);
       lastError = error;
+
+      clearTimeout(timeoutId);
+
+      // Don't retry on AbortError (timeout) or non-retryable errors
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
 
       if (attempt < MAX_RETRIES - 1) {
         const delay = getRetryDelay(attempt);
@@ -95,6 +128,16 @@ serve(async (req: Request) => {
 
     if (!query) {
       throw new Error('Query parameter is required');
+      return new Response(JSON.stringify({
+        error: 'Query parameter is required',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
     }
 
     // Check cache
@@ -138,7 +181,12 @@ serve(async (req: Request) => {
     }
 
     // Transform the data
-    const interest = (data.items || []).map((item: any) => ({
+    const items = data.items || [];
+    if (items.length === 0) {
+      throw new Error(`No page view data available for "${articleTitle}"`);
+    }
+
+    const interest = items.map((item: any) => ({
       timestamp: item.timestamp.slice(0, 8), // YYYYMMDD format
       value: item.views
     }));
@@ -173,16 +221,30 @@ serve(async (req: Request) => {
     });
   } catch (error) {
     console.error('Error in wikipedia-pageviews function:', error);
-    const statusCode = error.message?.includes('404') ? 404 : 500;
+    
+    let statusCode = 500;
+    let errorMessage = 'Failed to fetch page views';
+    
+    if (error.message?.includes('404')) {
+      statusCode = 404;
+      errorMessage = `Article not found`;
+    } else if (error.message?.includes('timeout')) {
+      statusCode = 504;
+      errorMessage = 'Request timed out';
+    } else if (error.message?.includes('rate limit') || error.message?.includes('429')) {
+      statusCode = 429;
+      errorMessage = 'Rate limit exceeded. Please try again later.';
+    }
     
     return new Response(JSON.stringify({
-      error: error.message || 'Failed to fetch page views',
+      error: errorMessage,
       timestamp: new Date().toISOString()
     }), {
       status: statusCode,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(statusCode === 429 ? { 'Retry-After': '60' } : {})
       }
     });
   }
