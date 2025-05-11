@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
+const TRANCO_API_KEY = Deno.env.get("TRANCO_API_KEY");
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -38,6 +40,10 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const domain = url.searchParams.get('domain');
 
+    if (!TRANCO_API_KEY) {
+      throw new Error('TRANCO_API_KEY not configured');
+    }
+
     if (!domain) {
       throw new Error('Domain parameter is required');
     }
@@ -47,7 +53,7 @@ serve(async (req: Request) => {
       `https://tranco-list.eu/api/ranks/domain/${encodeURIComponent(domain)}`,
       {
         headers: {
-          'Authorization': '568584e0d0e147ddb15935fb549441b0',
+          'Authorization': TRANCO_API_KEY,
           'Accept': 'application/json'
         }
       }
@@ -78,7 +84,7 @@ serve(async (req: Request) => {
       `https://tranco-list.eu/api/ranks/history/${encodeURIComponent(domain)}`,
       {
         headers: {
-          'Authorization': '568584e0d0e147ddb15935fb549441b0',
+          'Authorization': TRANCO_API_KEY,
           'Accept': 'application/json'
         }
       }
