@@ -14,6 +14,8 @@ interface NewsArticle {
 
 export async function getBrandNews(brandName: string): Promise<NewsArticle[]> {
   try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?brand=eq.${brandName}`, {
+      headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Accept': 'application/json',
         'Cache-Control': 'no-cache'
