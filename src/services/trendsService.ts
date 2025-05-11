@@ -67,7 +67,7 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
   try {
     // Check circuit breaker
     if (circuitOpen) {
-      throw new Error('Service temporarily unavailable. Please try again in 30 seconds.');
+      throw new Error('Service is recovering. Please try again in 30 seconds.');
     }
 
     let lastError: Error | null = null;
@@ -85,12 +85,13 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache'
+            'Cache-Control': 'no-cache',
+            'Content-Type': 'application/json'
           }
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await response.json().catch(() => ({ error: `HTTP error ${response.status}` }));
           recordFailure();
           throw new Error(errorData.error || `HTTP error ${response.status}`);
         }
@@ -107,6 +108,7 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
         // Don't retry on specific errors
         if (
           error.message?.includes('rate limit') ||
+          error.message?.includes('recovering') ||
           error.message?.includes('429') ||
           error.message?.includes('invalid') ||
           error.message?.includes('not found') ||
@@ -135,11 +137,11 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
     });
 
     // Return user-friendly error messages
-    if (error.message.includes('rate limit') || error.message.includes('429')) {
+    if (error.message?.includes('rate limit') || error.message?.includes('429')) {
       throw new Error('Rate limit exceeded. Please try again in a minute.');
     }
     
-    if (error.message?.includes('timeout') || error.message?.includes('504')) {
+    if (error.message?.includes('timeout') || error.message?.includes('504') || error.message?.includes('recovering')) {
       throw new Error('Request timed out. Please try again.');
     }
 
@@ -150,7 +152,7 @@ export async function getBrandTrends(brandName: string): Promise<TrendResponse> 
     // Return a more specific error message when possible
     throw new Error(
       error.message?.includes('fetch') 
-        ? 'Network error. Please check your connection and try again.'
+        ? 'Connection error. Please check your network and try again.'
         : 'Unable to fetch trend data. Please try again later.'
     );
   }
