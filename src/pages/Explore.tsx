@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Grid3X3, List } from 'lucide-react';
+import { Search, Grid3X3, List, TrendingUp, TrendingDown } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
@@ -174,9 +174,16 @@ export function ExplorePage() {
   async function fetchBrands() {
     try {
       setLoading(true);
-      let query = supabase
-        .from('brands')
-        .select('*', { count: 'exact' });
+      
+      let query = supabase.from('brands')
+        .select(`
+          *,
+          brand_rankings (
+            ranking_score,
+            rank,
+            trend_pct
+          )
+        `, { count: 'exact' });
 
       // Non-admin users can only see approved brands
       if (!isAdmin) {
@@ -373,9 +380,10 @@ export function ExplorePage() {
                     <tr className="bg-gray-800/50">
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Brand</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Creators</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Category</th>
+                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Rank</th>
+                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Score</th>
+                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Trend</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[40%]">Description</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[7%]">Founded</th>
                       <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[8%]">Actions</th>
                     </tr>
                   </thead>
@@ -418,18 +426,40 @@ export function ExplorePage() {
                               {brand.creators}
                             </div>
                           </td>
-                          <td className="px-3 py-4">
-                            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${categoryColors.bg} ${categoryColors.text}`}>
-                              {brand.product_category}
+                          <td className="px-3 py-4 text-center">
+                            <span className="text-gray-300">
+                              #{brand.brand_rankings?.[0]?.rank || '-'}
                             </span>
+                          </td>
+                          <td className="px-3 py-4 text-center">
+                            <span className="text-gray-300">
+                              {brand.brand_rankings?.[0]?.ranking_score?.toFixed(1) || '-'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 text-center">
+                            {brand.brand_rankings?.[0]?.trend_pct ? (
+                              <div className={`flex items-center justify-center ${
+                                brand.brand_rankings[0].trend_pct > 0 
+                                  ? 'text-green-400' 
+                                  : brand.brand_rankings[0].trend_pct < 0 
+                                    ? 'text-red-400' 
+                                    : 'text-gray-400'
+                              }`}>
+                                {brand.brand_rankings[0].trend_pct > 0 ? (
+                                  <TrendingUp className="w-4 h-4 mr-1" />
+                                ) : brand.brand_rankings[0].trend_pct < 0 ? (
+                                  <TrendingDown className="w-4 h-4 mr-1" />
+                                ) : null}
+                                {Math.abs(brand.brand_rankings[0].trend_pct)}%
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">-</span>
+                            )}
                           </td>
                           <td className="px-3 py-4">
                             <div className="text-sm text-gray-300 line-clamp-2">
                               {brand.description}
                             </div>
-                          </td>
-                          <td className="px-3 py-4 text-sm text-gray-300">
-                            {brand.year_founded}
                           </td>
                           <td className="px-3 py-4">
                             <div className="flex items-center justify-center space-x-2">
