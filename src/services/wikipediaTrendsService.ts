@@ -38,7 +38,7 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || `Failed to fetch page views: ${response.status}`);
+      throw new Error(error.error || `Error fetching page views: ${response.status}`);
     }
 
     const data = await response.json();
@@ -56,6 +56,10 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
       brandName
     });
 
-    throw new Error(error.message || 'Failed to fetch page view data');
+    if (error.message?.includes('not found')) {
+      throw new Error(`No Wikipedia data available for "${brandName}"`);
+    }
+    
+    throw new Error('Unable to fetch trend data. Please try again later.');
   }
 }

@@ -10,26 +10,31 @@ const corsHeaders = {
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const cache = new Map<string, { data: any; timestamp: number }>();
 
-const USER_AGENT = 'CelebrityBrandsApp/1.0 (https://celebritybrands.com; contact@celebritybrands.com)';
+const USER_AGENT = 'CelebrityBrandsBot/1.0 (https://celebritybrands.com; contact@celebritybrands.com)';
 
 async function fetchPageViews(article: string): Promise<any> {
   const now = new Date();
   const startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   
-  const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/${encodeURIComponent(article)}/daily/${startDate.toISOString().split('T')[0]}/${now.toISOString().split('T')[0]}`;
+  // Format dates as YYYYMMDD
+  const startStr = startDate.toISOString().slice(0,10).replace(/-/g,'');
+  const endStr = now.toISOString().slice(0,10).replace(/-/g,'');
+  
+  const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/${encodeURIComponent(article)}/daily/${startStr}/${endStr}`;
 
   const response = await fetch(url, {
     headers: {
       'User-Agent': USER_AGENT,
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Api-User-Agent': USER_AGENT
     }
   });
 
   if (!response.ok) {
     if (response.status === 404) {
-      return { error: 'Article not found' };
+      return { error: `Wikipedia article "${article}" not found` };
     }
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`Wikipedia API error: ${response.status}`);
   }
 
   return await response.json();
@@ -67,16 +72,22 @@ serve(async (req: Request) => {
     // Convert query to Wikipedia article title format
     const articleTitle = query
       .trim()
+      // Replace spaces with underscores
       .replace(/\s+/g, '_')
-      .replace(/[^\w\s-]/g, '')
-      .replace(/_+/g, '_');
+      // Keep alphanumeric, spaces, hyphens, and some punctuation
+      .replace(/[^\w\s\-'.]/g, '')
+      // Capitalize first letter of each word
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join('_');
 
     const data = await fetchPageViews(articleTitle);
 
     if (data.error) {
       return new Response(JSON.stringify({
         error: data.error,
-        articleTitle
+        articleTitle,
+        timestamp: new Date().toISOString()
       }), {
         status: 404,
         headers: {
