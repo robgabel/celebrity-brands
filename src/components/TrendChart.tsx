@@ -129,7 +129,7 @@ export function TrendChart({ data, isLoading, error }: TrendChartProps) {
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-gray-100">Interest Trends</h2>
         <p className="text-sm text-gray-400 mt-1">
-          Relative search interest over the past 12 months
+          {data.source} for {data.articleTitle}
         </p>
       </div>
       <div className="h-64">

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { getCategoryColor } from '../lib/categoryUtils';
 import { getBrandNews } from '../lib/newsApi';
-import { getBrandTrends, TrendResponse } from '../services/trendsService';
+import { getWikipediaPageViews, TrendResponse } from '../services/wikipediaTrendsService';
 import { getDomainRanking, RankingResponse } from '../services/domainRankingService';
 import { TrendChart } from '../components/TrendChart';
 import { DomainRanking } from '../components/DomainRanking';
@@ -91,7 +91,7 @@ export function BrandDetails() {
     setTrendLoading(true);
     setTrendError(null);
     try {
-      const data = await getBrandTrends(brandName);
+      const data = await getWikipediaPageViews(brandName);
       setTrendData(data);
     } catch (err: any) {
       console.error('Error fetching trends:', err);
