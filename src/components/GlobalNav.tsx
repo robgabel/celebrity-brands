@@ -45,9 +45,15 @@ export function GlobalNav({
           <nav className="hidden md:flex items-center">
             <Link 
               to="/explore" 
-              className="text-gray-300 hover:text-gray-100 transition-colors"
+              className="text-gray-300 hover:text-gray-100 transition-colors mr-6"
             >
               Explore
+            </Link>
+            <Link
+              to="/compare"
+              className="text-gray-300 hover:text-gray-100 transition-colors"
+            >
+              Compare
             </Link>
           </nav>
         </div>
