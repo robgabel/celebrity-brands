@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Globe, Calendar, Building2, Package, AlertCircle, Newspaper } from 'lucide-react';
+import { ChevronLeft, Globe, Calendar, Building2, Package, AlertCircle, Newspaper, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { getCategoryColor } from '../lib/categoryUtils';
@@ -55,6 +55,42 @@ export function BrandDetails() {
   const [rankingData, setRankingData] = useState<RankingResponse | null>(null);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingError, setRankingError] = useState<string | null>(null);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [storyError, setStoryError] = useState<string | null>(null);
+
+  const generateBrandStory = async () => {
+    if (!brand) return;
+    
+    setIsGeneratingStory(true);
+    setStoryError(null);
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ brandId: brand.id })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate brand story');
+      }
+
+      // Refresh brand data to get the new story
+      await fetchBrandDetails();
+    } catch (err: any) {
+      console.error('Error generating brand story:', err);
+      setStoryError(err.message);
+    } finally {
+      setIsGeneratingStory(false);
+    }
+  };
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -354,6 +390,19 @@ export function BrandDetails() {
             <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
               <h2 className="text-xl font-semibold text-gray-100 mb-4">About</h2>
               <p className="text-gray-300 whitespace-pre-wrap">{brand.description}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <Button
+                  onClick={generateBrandStory}
+                  isLoading={isGeneratingStory}
+                  className="flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Generate Brand Story
+                </Button>
+                {storyError && (
+                  <p className="text-sm text-red-400">{storyError}</p>
+                )}
+              </div>
             </div>
 
             <DomainRanking
