@@ -408,11 +408,15 @@ export function BrandDetails() {
                       </p>
                     )}
                     <div className="space-y-4">
-                      {brand.brand_story.full_story.map((paragraph, index) => (
+                      {Array.isArray(brand.brand_story.full_story) ? brand.brand_story.full_story.map((paragraph, index) => (
                         <p key={index} className="text-gray-300">
                           {paragraph}
                         </p>
-                      ))}
+                      )) : (
+                        <p className="text-gray-300 whitespace-pre-wrap">
+                          {brand.brand_story.full_story}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
