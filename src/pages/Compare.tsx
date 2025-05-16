@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Calendar } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { getWikipediaPageViews } from '../services/wikipediaTrendsService';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
+import type { TrendData } from '../services/wikipediaTrendsService';
 
 interface Brand {
   id: number;
   name: string;
 }
 
-interface BrandMetric {
-  brand_id: number;
-  metric_value: number;
-  collected_at: string;
+interface BrandTrends {
+  brandId: number;
+  brandName: string;
+  data: TrendData[];
 }
 
 const COLORS = [
@@ -28,8 +29,8 @@ const COLORS = [
 
 export function ComparePage() {
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
-  const [metrics, setMetrics] = useState<BrandMetric[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<Brand[]>([]);
+  const [trendData, setTrendData] = useState<BrandTrends[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -42,12 +43,31 @@ export function ComparePage() {
   }, []);
 
   useEffect(() => {
-    if (selectedBrands.length > 0) {
-      fetchMetrics();
+    if (selectedBrands.length > 0 && dateRange) {
+      fetchTrendData();
     }
-  }, [selectedBrands, dateRange]);
+  }, [selectedBrands]);
 
   const fetchBrands = async () => {
+    try {
+      const { data: brandsData } = await supabase
+        .from('brands')
+        .select('id, name')
+        .eq('approval_status', 'approved')
+        .order('name');
+
+      if (brandsData) {
+        setBrands(brandsData);
+      }
+    } catch (err: any) {
+      console.error('Error fetching brands:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrendData = async () => {
     try {
       const { data, error } = await supabase
         .from('brands')
@@ -68,43 +88,36 @@ export function ComparePage() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
         .from('brand_metrics')
         .select('brand_id, metric_value, collected_at')
         .in('brand_id', selectedBrands)
-        .eq('metric_type', 'search_interest')
-        .gte('collected_at', dateRange.start)
-        .lte('collected_at', dateRange.end)
-        .order('collected_at');
+      setError(null);
 
-      if (error) throw error;
-      setMetrics(data || []);
-    } catch (err: any) {
-      console.error('Error fetching metrics:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBrandToggle = (brandId: number) => {
+      const trendsPromises = selectedBrands.map(async (brand) => {
+        try {
+  const handleBrandToggle = (brand: Brand) => {
     setSelectedBrands(prev => 
-      prev.includes(brandId)
-        ? prev.filter(id => id !== brandId)
-        : [...prev, brandId].slice(0, 6) // Limit to 6 brands
+      prev.find(b => b.id === brand.id)
+        ? prev.filter(b => b.id !== brand.id)
+        : [...prev, brand].slice(0, 6) // Limit to 6 brands
     );
   };
 
+  const formatDate = (timestamp: string) => {
+    // Convert YYYYMMDD to readable date
+    const year = timestamp.slice(0, 4);
+    const month = timestamp.slice(4, 6);
+    const day = timestamp.slice(6, 8);
+    return new Date(`${year}-${month}-${day}`).toLocaleDateString();
+  };
+
   const chartData = {
-    datasets: selectedBrands.map((brandId, index) => {
-      const brandMetrics = metrics.filter(m => m.brand_id === brandId);
-      const brand = brands.find(b => b.id === brandId);
-      
+    datasets: trendData.map((brand, index) => {
       return {
-        label: brand?.name || `Brand ${brandId}`,
-        data: brandMetrics.map(m => ({
-          x: new Date(m.collected_at).toLocaleDateString(),
-          y: m.metric_value
+        label: brand.brandName,
+        data: brand.data.map(point => ({
+          x: formatDate(point.timestamp),
+          y: point.value
         })),
         borderColor: COLORS[index % COLORS.length],
         backgroundColor: COLORS[index % COLORS.length],
@@ -171,10 +184,10 @@ export function ComparePage() {
                     key={brand.id}
                     className="flex items-center space-x-2 p-2 hover:bg-gray-700/50 rounded-lg cursor-pointer"
                   >
-                    <input
+                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand.id)}
-                      onChange={() => handleBrandToggle(brand.id)}
+                      checked={selectedBrands.some(b => b.id === brand.id)}
+                      onChange={() => handleBrandToggle(brand)}
                       className="rounded border-gray-600 text-teal-500 focus:ring-teal-500 bg-gray-700"
                     />
                     <span className="text-gray-300">{brand.name}</span>
@@ -224,7 +237,7 @@ export function ComparePage() {
             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
               {loading ? (
                 <div className="flex items-center justify-center h-[400px]">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mb-4"></div>
                 </div>
               ) : error ? (
                 <div className="flex items-center justify-center h-[400px]">
@@ -237,6 +250,9 @@ export function ComparePage() {
               ) : (
                 <div className="h-[400px]">
                   <Line data={chartData} options={chartOptions} />
+                  <div className="mt-4 text-sm text-gray-400 text-center">
+                    Data source: Wikipedia Page Views
+                  </div>
                 </div>
               )}
             </div>
