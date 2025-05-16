@@ -6,6 +6,7 @@ import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
 import type { TrendData } from '../services/wikipediaTrendsService';
+import { supabase } from '../lib/supabase';
 
 interface Brand {
   id: number;
@@ -88,6 +89,7 @@ export function ComparePage() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
+      const { data, error } = await supabase
         .from('brand_metrics')
         .select('brand_id, metric_value, collected_at')
         .in('brand_id', selectedBrands)
