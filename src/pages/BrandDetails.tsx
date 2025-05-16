@@ -418,12 +418,12 @@ export function BrandDetails() {
                   
                   {Object.keys(brand.brand_story.metrics).length > 0 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-200 mb-2">Business Metrics</h3>
-                      <dl className="grid grid-cols-2 gap-4">
+                      <h3 className="text-lg font-semibold text-gray-200 mb-4">Business Metrics</h3>
+                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {Object.entries(brand.brand_story.metrics).map(([key, value]) => (
-                          <div key={key}>
-                            <dt className="text-sm font-medium text-gray-400">{key}</dt>
-                            <dd className="mt-1 text-gray-300">{value}</dd>
+                          <div key={key} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
+                            <dt className="text-sm font-medium text-gray-400 mb-1">{key}</dt>
+                            <dd className="text-xl font-semibold text-teal-400">{value}</dd>
                           </div>
                         ))}
                       </dl>
