@@ -63,8 +63,12 @@ export function TrendChart({ data, isLoading, error }: TrendChartProps) {
   if (!data || !data.interest || data.interest.length === 0) {
     return (
       <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <div className="flex items-center justify-center h-32">
-          <p className="text-gray-400">No trend data available for this brand.</p>
+        <div className="flex flex-col items-center justify-center h-32">
+          <p className="text-gray-400 text-center">
+            {data?.dataAvailable === false 
+              ? "This brand doesn't have a Wikipedia page yet. Trend data will be available once the page is created."
+              : "No trend data available for this brand."}
+          </p>
         </div>
       </div>
     );

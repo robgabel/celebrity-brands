@@ -38,10 +38,22 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || `Error fetching page views: ${response.status}`);
+      if (response.status === 404) {
+        return {
+          interest: [],
+          averageInterest: 0,
+          maxInterest: 0,
+          minInterest: 0,
+          articleTitle: brandName,
+          source: 'Wikipedia Page Views',
+          dataAvailable: false
+        };
+      }
+      throw new Error(`Failed to fetch page views: ${response.status}`);
     }
 
     const data = await response.json();
+    data.dataAvailable = true;
     
     // Cache the results
     cache.set(cacheKey, {

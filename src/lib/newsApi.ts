@@ -34,6 +34,11 @@ export async function getBrandNews(brandName: string): Promise<NewsArticle[]> {
     });
 
     if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (contentType && !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from news API');
+      }
+
       const error = await response.json();
       throw new Error(error.error || `Failed to fetch news: ${response.status}`);
     }
