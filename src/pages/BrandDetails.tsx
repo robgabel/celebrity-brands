@@ -402,6 +402,11 @@ export function BrandDetails() {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-200 mb-2">Brand Story</h3>
                     <p className="text-gray-300 italic mb-4">{brand.brand_story.summary}</p>
+                    {brand.last_story_update && (
+                      <p className="text-sm text-gray-500 mb-4">
+                        Story written on {new Date(brand.last_story_update).toLocaleDateString()}
+                      </p>
+                    )}
                     <p className="text-gray-300 whitespace-pre-wrap">{brand.brand_story.full_story}</p>
                   </div>
                   
@@ -414,26 +419,6 @@ export function BrandDetails() {
                         ))}
                       </ul>
                     </div>
-                  )}
-                  
-                  {Object.keys(brand.brand_story.metrics).length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-200 mb-4">Business Metrics</h3>
-                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {Object.entries(brand.brand_story.metrics).map(([key, value]) => (
-                          <div key={key} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
-                            <dt className="text-sm font-medium text-gray-400 mb-1">{key}</dt>
-                            <dd className="text-xl font-semibold text-teal-400">{value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                  )}
-                  
-                  {brand.last_story_update && (
-                    <p className="text-sm text-gray-500">
-                      Last updated: {new Date(brand.last_story_update).toLocaleDateString()}
-                    </p>
                   )}
                 </div>
               ) : (
