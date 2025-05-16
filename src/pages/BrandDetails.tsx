@@ -37,7 +37,7 @@ interface Brand {
   approval_status: string;
   brand_story: {
     summary: string;
-    full_story: string;
+    full_story: string[];
     metrics: Record<string, string>;
     key_events: string[];
   } | null;
@@ -407,7 +407,13 @@ export function BrandDetails() {
                         Story written on {new Date(brand.last_story_update).toLocaleDateString()}
                       </p>
                     )}
-                    <p className="text-gray-300 whitespace-pre-wrap">{brand.brand_story.full_story}</p>
+                    <div className="space-y-4">
+                      {brand.brand_story.full_story.map((paragraph, index) => (
+                        <p key={index} className="text-gray-300">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                   
                   {brand.brand_story.key_events.length > 0 && (

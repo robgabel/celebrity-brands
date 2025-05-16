@@ -21,12 +21,18 @@ Write a compelling narrative about the brand, focusing on:
 - Business metrics if available
 - Future growth prospects
 
-Write in a professional, journalistic style. Be specific and detailed.
+Write in a professional, journalistic style. Be specific and detailed. 
+Break the full story into clear, well-organized paragraphs.
+
 Format the response as a JSON object with these keys:
-- summary: A brief 2-3 sentence overview
-- full_story: The complete narrative
-- metrics: Any concrete business metrics mentioned
-- key_events: Array of important milestones
+{
+  "summary": "A brief 2-3 sentence overview",
+  "full_story": ["First paragraph", "Second paragraph", "Third paragraph", ...],
+  "metrics": {"metric1": "value1", "metric2": "value2"},
+  "key_events": ["Event 1", "Event 2", "Event 3"]
+}
+
+The full_story should be an array of paragraphs, each as a separate string.
 `;
 
 serve(async (req: Request) => {
@@ -71,9 +77,11 @@ serve(async (req: Request) => {
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `Generate a story about ${brand.name}, founded by ${brand.creators} in ${brand.year_founded}. 
-          Product category: ${brand.product_category}
-          Description: ${brand.description}`
+          content: `Generate a detailed story about ${brand.name}, founded by ${brand.creators} in ${brand.year_founded}. 
+Product category: ${brand.product_category}
+Description: ${brand.description}
+
+Make sure to break the story into clear, well-organized paragraphs.`
         }
       ],
       temperature: 0.7,
