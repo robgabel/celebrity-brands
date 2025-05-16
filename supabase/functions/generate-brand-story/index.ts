@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.7";
-import { Configuration, OpenAIApi } from "npm:openai@4.28.0";
+import OpenAI from "npm:openai@4.28.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,10 +57,12 @@ serve(async (req: Request) => {
     if (!brand) throw new Error('Brand not found');
 
     // Initialize OpenAI
-    const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY')
-    });
-    const openai = new OpenAIApi(configuration);
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const openai = new OpenAI({ apiKey: openaiKey });
 
     // Generate story
     const completion = await openai.chat.completions.create({
@@ -106,7 +108,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: error.message || 'Failed to generate brand story'
-      }),
+      }).trim(),
       {
         status: 500,
         headers: {
