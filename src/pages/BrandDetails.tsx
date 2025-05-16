@@ -98,42 +98,6 @@ export function BrandDetails() {
       setIsGeneratingStory(false);
     }
   };
-  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
-  const [storyError, setStoryError] = useState<string | null>(null);
-
-  const generateBrandStory = async () => {
-    if (!brand) return;
-    
-    setIsGeneratingStory(true);
-    setStoryError(null);
-    
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ brandId: brand.id })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate brand story');
-      }
-
-      // Refresh brand data to get the new story
-      await fetchBrandDetails();
-    } catch (err: any) {
-      console.error('Error generating brand story:', err);
-      setStoryError(err.message);
-    } finally {
-      setIsGeneratingStory(false);
-    }
-  };
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -487,19 +451,6 @@ export function BrandDetails() {
                   )}
                 </div>
               )}
-              <div className="mt-4 flex items-center gap-2">
-                <Button
-                  onClick={generateBrandStory}
-                  isLoading={isGeneratingStory}
-                  className="flex items-center gap-2"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Generate Brand Story
-                </Button>
-                {storyError && (
-                  <p className="text-sm text-red-400">{storyError}</p>
-                )}
-              </div>
             </div>
 
             <DomainRanking
