@@ -95,6 +95,17 @@ export function ComparePage() {
 
       const trendsPromises = selectedBrands.map(async (brand) => {
         try {
+          return {};
+        } catch (err) {
+          console.error(err);
+          return null;
+        }
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleBrandToggle = (brand: Brand) => {
     setSelectedBrands(prev => 
       prev.find(b => b.id === brand.id)
