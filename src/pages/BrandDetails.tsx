@@ -35,6 +35,13 @@ interface Brand {
   homepage_url: string | null;
   social_links: Record<string, string> | null;
   approval_status: string;
+  brand_story: {
+    summary: string;
+    full_story: string;
+    metrics: Record<string, string>;
+    key_events: string[];
+  } | null;
+  last_story_update: string | null;
 }
 
 export function BrandDetails() {
@@ -55,6 +62,42 @@ export function BrandDetails() {
   const [rankingData, setRankingData] = useState<RankingResponse | null>(null);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingError, setRankingError] = useState<string | null>(null);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [storyError, setStoryError] = useState<string | null>(null);
+
+  const generateBrandStory = async () => {
+    if (!brand) return;
+    
+    setIsGeneratingStory(true);
+    setStoryError(null);
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ brandId: brand.id })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate brand story');
+      }
+
+      // Refresh brand data to get the new story
+      await fetchBrandDetails();
+    } catch (err: any) {
+      console.error('Error generating brand story:', err);
+      setStoryError(err.message);
+    } finally {
+      setIsGeneratingStory(false);
+    }
+  };
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [storyError, setStoryError] = useState<string | null>(null);
 
@@ -390,6 +433,60 @@ export function BrandDetails() {
             <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
               <h2 className="text-xl font-semibold text-gray-100 mb-4">About</h2>
               <p className="text-gray-300 whitespace-pre-wrap">{brand.description}</p>
+              {brand.brand_story ? (
+                <div className="mt-6 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-200 mb-2">Brand Story</h3>
+                    <p className="text-gray-300 italic mb-4">{brand.brand_story.summary}</p>
+                    <p className="text-gray-300 whitespace-pre-wrap">{brand.brand_story.full_story}</p>
+                  </div>
+                  
+                  {brand.brand_story.key_events.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-200 mb-2">Key Milestones</h3>
+                      <ul className="list-disc list-inside space-y-1">
+                        {brand.brand_story.key_events.map((event, index) => (
+                          <li key={index} className="text-gray-300">{event}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {Object.keys(brand.brand_story.metrics).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-200 mb-2">Business Metrics</h3>
+                      <dl className="grid grid-cols-2 gap-4">
+                        {Object.entries(brand.brand_story.metrics).map(([key, value]) => (
+                          <div key={key}>
+                            <dt className="text-sm font-medium text-gray-400">{key}</dt>
+                            <dd className="mt-1 text-gray-300">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                  
+                  {brand.last_story_update && (
+                    <p className="text-sm text-gray-500">
+                      Last updated: {new Date(brand.last_story_update).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    onClick={generateBrandStory}
+                    isLoading={isGeneratingStory}
+                    className="flex items-center gap-2"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Generate Brand Story
+                  </Button>
+                  {storyError && (
+                    <p className="text-sm text-red-400">{storyError}</p>
+                  )}
+                </div>
+              )}
               <div className="mt-4 flex items-center gap-2">
                 <Button
                   onClick={generateBrandStory}
