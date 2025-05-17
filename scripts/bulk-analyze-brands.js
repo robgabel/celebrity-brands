@@ -54,19 +54,34 @@ async function main() {
   try {
     console.log('Fetching brands with NULL descriptions...');
     
-    const { data: brands, error } = await supabase
+    // First query for NULL descriptions
+    const { data: nullBrands, error: nullError } = await supabase
       .from('brands')
       .select('id, name')
-      .or('description.is.null,description.eq.');
+      .is('description', null);
 
-    if (error) throw error;
+    if (nullError) throw nullError;
 
-    if (!brands || brands.length === 0) {
+    // Then query for empty string descriptions
+    const { data: emptyBrands, error: emptyError } = await supabase
+      .from('brands')
+      .select('id, name')
+      .eq('description', '');
+
+    if (emptyError) throw emptyError;
+
+    // Combine results
+    const brands = [...(nullBrands || []), ...(emptyBrands || [])];
+
+    console.log('NULL descriptions:', nullBrands?.length || 0);
+    console.log('Empty descriptions:', emptyBrands?.length || 0);
+
+    if (!brands.length) {
       console.log('No brands found with NULL or empty descriptions.');
       return;
     }
 
-    console.log(`Found ${brands.length} brands to analyze.`);
+    console.log(`\nFound ${brands.length} total brands to analyze.`);
     
     let successCount = 0;
     let failureCount = 0;
