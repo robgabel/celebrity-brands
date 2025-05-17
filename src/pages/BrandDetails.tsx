@@ -454,22 +454,12 @@ export function BrandDetails() {
                     )}
                     <div className="space-y-4">
                       {Array.isArray(brand.brand_story.full_story) ? brand.brand_story.full_story.map((paragraph, index) => (
-                        <p 
+                        <div 
                           key={index} 
-                          className={`text-gray-300 ${
-                            // Check if this is a section title
-                            (!paragraph.toLowerCase().includes('untitled section') && (
-                              paragraph.endsWith(':') || 
-                              (paragraph.split(' ').length <= 6 && 
-                              paragraph === paragraph.trim() && 
-                              (!paragraph.endsWith('.') || paragraph.includes(': ')))
-                            ))
-                              ? 'font-bold text-xl text-gray-100 mt-8 mb-4' 
-                              : ''
-                          }`}
+                          dangerouslySetInnerHTML={{ __html: paragraph }}
+                          className="[&>h3]:font-bold [&>h3]:text-xl [&>h3]:text-gray-100 [&>h3]:mt-8 [&>h3]:mb-4 [&>p]:text-gray-300"
                         >
-                          {!paragraph.toLowerCase().includes('untitled section') ? paragraph : null}
-                        </p>
+                        </div>
                       )) : (
                         <p className="text-gray-300 whitespace-pre-wrap">
                           {brand.brand_story.full_story}
