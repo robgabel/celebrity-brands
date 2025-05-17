@@ -130,7 +130,7 @@ export function HomePage() {
             Celebrity-Owned Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
-            Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities and influencers.
+            Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities, creators and influencers.
           </p>
           
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
