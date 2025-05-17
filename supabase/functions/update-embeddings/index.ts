@@ -68,7 +68,6 @@ serve(async (req: Request) => {
             model: "text-embedding-ada-002",
             input: item.text_for_embedding.trim()
           });
-          }, backoffConfig);
 
           if (!response.data[0]?.embedding) {
             throw new Error('Empty embedding response');
