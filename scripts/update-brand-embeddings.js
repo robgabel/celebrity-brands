@@ -130,6 +130,7 @@ async function processBrandsInBatches(brands) {
       console.log(`\nWaiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`);
       await sleep(DELAY_BETWEEN_BATCHES);
     }
+  }
 
   return results;
 }
