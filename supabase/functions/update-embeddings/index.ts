@@ -9,25 +9,38 @@ const corsHeaders = {
 };
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_DELAY = 1000;
+const MAX_RETRIES = 5;
+const INITIAL_DELAY = 2000;
+const MAX_DELAY = 30000;
 
 async function retryWithExponentialBackoff<T>(
   operation: () => Promise<T>,
   retries = MAX_RETRIES,
-  delay = INITIAL_DELAY
+  delay = INITIAL_DELAY,
+  maxDelay = MAX_DELAY
 ): Promise<T> {
   try {
     return await operation();
   } catch (error) {
     if (retries === 0) throw error;
     
-    // Add jitter to delay
-    const jitteredDelay = delay + Math.random() * 1000;
+    // Calculate delay with exponential backoff and jitter
+    const jitteredDelay = Math.min(
+      delay + (Math.random() * 1000),
+      maxDelay
+    );
+    
+    console.log(`Retrying operation after ${jitteredDelay}ms, ${retries} attempts remaining...`);
+    console.log(`Error was: ${error.message}`);
+    
     await new Promise(resolve => setTimeout(resolve, jitteredDelay));
     
-    console.log(`Retrying operation, ${retries} attempts remaining...`);
-    return retryWithExponentialBackoff(operation, retries - 1, delay * 2);
+    return retryWithExponentialBackoff(
+      operation,
+      retries - 1,
+      Math.min(delay * 2, maxDelay),
+      maxDelay
+    );
   }
 }
 
@@ -49,14 +62,18 @@ serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const openai = new OpenAI({ apiKey: openaiKey });
+    const openai = new OpenAI({ 
+      apiKey: openaiKey,
+      timeout: 60000, // 60 second timeout
+      maxRetries: 3
+    });
 
     // Get pending embedding requests
     const { data: pendingItems, error: queueError } = await supabase
       .from('embedding_queue')
       .select('id, record_id, text_for_embedding')
       .eq('status', 'pending')
-      .limit(5); // Process in even smaller batches
+      .limit(3); // Process in smaller batches
 
     if (queueError) throw queueError;
     if (!pendingItems?.length) {
@@ -82,9 +99,19 @@ serve(async (req: Request) => {
       try {
         // Generate embedding with retry
         const embedding = await retryWithExponentialBackoff(async () => {
+          // Validate and clean input text
+          const cleanText = item.text_for_embedding
+            .trim()
+            .slice(0, 8000) // Limit text length
+            .replace(/\s+/g, ' '); // Normalize whitespace
+
+          if (!cleanText) {
+            throw new Error('Empty text after cleaning');
+          }
+
           const response = await openai.embeddings.create({
             model: "text-embedding-ada-002",
-            input: item.text_for_embedding.trim().slice(0, 8000) // Limit text length
+            input: cleanText
           });
 
           if (!response.data[0]?.embedding) {
@@ -121,6 +148,9 @@ serve(async (req: Request) => {
 
         results.success++;
         console.log(`✅ Successfully updated embedding for brand ${item.record_id}`);
+        
+        // Add delay between processing items
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (err) {
         results.failed++;
         const errorMsg = `Brand ${item.record_id}: ${err.message || 'Unknown error'}`;
@@ -141,8 +171,8 @@ serve(async (req: Request) => {
           console.error('Failed to update queue status:', updateErr);
         }
 
-        // Add delay after error to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Add longer delay after error
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
 

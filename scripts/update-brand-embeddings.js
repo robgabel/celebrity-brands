@@ -3,40 +3,12 @@ import axios from 'axios';
 import { backOff } from 'exponential-backoff';
 import dotenv from 'dotenv';
 
-// Enhanced retry configuration
-const RETRY_CONFIG = {
-  numOfAttempts: 5,
-  startingDelay: 5000, // 5 seconds
-  maxDelay: 30000, // 30 seconds
-  jitter: 'full',
-  timeMultiple: 2,
-  retry: (e, attemptNumber) => {
-    const isNetworkError = e.message?.includes('fetch failed') || 
-                          e.message?.includes('network') ||
-                          e.message?.includes('timeout');
-    
-    if (isNetworkError) {
-      console.log(`[${new Date().toISOString()}] Network error detected, implementing longer delay...`);
-      return true;
-    }
-    
-    const isRateLimit = e.message?.includes('rate limit') || 
-                       e.message?.includes('429');
-    
-    if (isRateLimit) {
-      console.log(`[${new Date().toISOString()}] Rate limit detected, waiting longer...`);
-      return true;
-    }
-    
-    console.log(`[${new Date().toISOString()}] Attempt ${attemptNumber} failed:`, e.message);
-    return attemptNumber < 5;
-  }
-};
-
-// Processing configuration
-const BATCH_SIZE = 1; // Process one brand at a time
-const DELAY_BETWEEN_BATCHES = 15000; // 15 seconds between batches
-const NETWORK_ERROR_DELAY = 30000; // 30 seconds after network error
+// Constants for retry and rate limiting
+const MAX_RETRIES = 8; // Increased from 5
+const INITIAL_RETRY_DELAY = 10000; // Increased to 10 seconds
+const MAX_RETRY_DELAY = 60000; // Increased to 60 seconds
+const BATCH_SIZE = 1; // Reduced to 1 to minimize concurrent requests
+const DELAY_BETWEEN_BATCHES = 15000; // Increased to 15 seconds between batches
 
 console.log('Starting brand embeddings update script...');
 
@@ -61,10 +33,14 @@ console.log('Supabase client initialized');
 
 // Initialize axios instance with defaults
 const api = axios.create({
-  timeout: 45000, // 45 second timeout
+  timeout: 60000, // Increased to 60 second timeout
   headers: {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json'
+  },
+  // Add retry configuration to axios
+  validateStatus: function (status) {
+    return status >= 200 && status < 500; // Retry on 5xx errors
   }
 });
 
@@ -74,30 +50,57 @@ async function sleep(ms) {
 
 async function updateBrandEmbedding(brandId) {
   const operation = async () => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Updating embedding for brand ID ${brandId}...`);
+    console.log(`[${new Date().toISOString()}] Updating embedding for brand ID ${brandId}...`);
+    
+    // Add health check before making the request
+    try {
+      const healthCheck = await api.get(`${SUPABASE_URL}/functions/v1/health`);
+      if (healthCheck.status !== 200) {
+        throw new Error('Edge function service is not healthy');
+      }
+    } catch (error) {
+      console.warn(`[${new Date().toISOString()}] Health check failed, will retry: ${error.message}`);
+      throw error; // Trigger retry
+    }
     
     const { data, error } = await supabase
       .rpc('update_brand_embedding', { brand_id: brandId });
 
-    if (error) throw error;
+    if (error) {
+      console.error(`[${new Date().toISOString()}] RPC error:`, error);
+      throw error;
+    }
 
-    console.log(`[${timestamp}] ✅ Successfully queued embedding update for brand ID ${brandId}`);
+    console.log(`[${new Date().toISOString()}] ✅ Successfully queued embedding update for brand ID ${brandId}`);
     return true;
   };
 
   try {
-    await backOff(operation, RETRY_CONFIG);
+    await backOff(operation, {
+      numOfAttempts: MAX_RETRIES,
+      startingDelay: INITIAL_RETRY_DELAY,
+      maxDelay: MAX_RETRY_DELAY,
+      jitter: 'full',
+      retry: (e, attemptNumber) => {
+        console.log(`[${new Date().toISOString()}] Attempt ${attemptNumber} failed:`, e.message);
+        // Add more specific error handling
+        if (e.message.includes('rate limit') || e.message.includes('429')) {
+          console.log('Rate limit detected, waiting longer before retry...');
+          return true;
+        }
+        if (e.message.includes('network') || e.message.includes('fetch failed')) {
+          console.log('Network error detected, will retry...');
+          return true;
+        }
+        if (attemptNumber < MAX_RETRIES) {
+          return true;
+        }
+        return false;
+      }
+    });
     return true;
   } catch (error) {
-    const timestamp = new Date().toISOString();
-    console.error(`[${timestamp}] ❌ Failed to update embedding for brand ID ${brandId}:`, error.message);
-    
-    if (error.message?.includes('fetch failed') || error.message?.includes('network')) {
-      console.log(`[${timestamp}] Network error detected, waiting ${NETWORK_ERROR_DELAY/1000}s...`);
-      await sleep(NETWORK_ERROR_DELAY);
-    }
-    
+    console.error(`[${new Date().toISOString()}] ❌ Failed to update embedding for brand ID ${brandId} after ${MAX_RETRIES} attempts:`, error.message);
     return false;
   }
 }
@@ -107,7 +110,11 @@ async function processEmbeddingQueue() {
     console.log(`[${new Date().toISOString()}] Processing embedding queue...`);
     
     const response = await api.post(
-      `${SUPABASE_URL}/functions/v1/update-embeddings`
+      `${SUPABASE_URL}/functions/v1/update-embeddings`,
+      {},
+      {
+        timeout: 120000 // Increased timeout for queue processing
+      }
     );
 
     console.log(`[${new Date().toISOString()}] ✅ Successfully processed embedding queue:`, response.data);
@@ -115,7 +122,16 @@ async function processEmbeddingQueue() {
   };
 
   try {
-    return await backOff(operation, RETRY_CONFIG);
+    return await backOff(operation, {
+      numOfAttempts: MAX_RETRIES,
+      startingDelay: INITIAL_RETRY_DELAY,
+      maxDelay: MAX_RETRY_DELAY,
+      jitter: 'full',
+      retry: (e, attemptNumber) => {
+        console.log(`[${new Date().toISOString()}] Queue processing attempt ${attemptNumber} failed:`, e.message);
+        return attemptNumber < MAX_RETRIES;
+      }
+    });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] ❌ Failed to process embedding queue:`, error.message);
     return null;
@@ -125,38 +141,24 @@ async function processEmbeddingQueue() {
 async function processBrandsInBatches(brands) {
   const results = {
     successCount: 0,
-    failureCount: 0
+    failureCount: 0,
+    failedBrands: [] // Track failed brands
   };
-
-  let consecutiveErrors = 0;
-  const MAX_CONSECUTIVE_ERRORS = 3;
 
   for (let i = 0; i < brands.length; i += BATCH_SIZE) {
     const batch = brands.slice(i, i + BATCH_SIZE);
     console.log(`\n[${new Date().toISOString()}] Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(brands.length/BATCH_SIZE)}`);
     
-    // Process brands in batch sequentially to avoid overwhelming the API
     for (const brand of batch) {
       const success = await updateBrandEmbedding(brand.id);
       if (success) {
-        consecutiveErrors = 0;
         results.successCount++;
       } else {
-        consecutiveErrors++;
         results.failureCount++;
-        
-        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-          console.log(`[${new Date().toISOString()}] ⚠️ ${MAX_CONSECUTIVE_ERRORS} consecutive errors detected, implementing cooling period...`);
-          await sleep(NETWORK_ERROR_DELAY);
-          consecutiveErrors = 0;
-        }
+        results.failedBrands.push(brand.id);
       }
-      
-      // Dynamic delay based on recent errors
-      const baseDelay = 2000;
-      const errorMultiplier = Math.pow(2, consecutiveErrors);
-      const delay = Math.min(baseDelay * errorMultiplier, 30000);
-      await sleep(delay);
+      // Increased delay between brands
+      await sleep(5000);
     }
 
     if (i + BATCH_SIZE < brands.length) {
@@ -195,19 +197,22 @@ async function main() {
     const results = await processBrandsInBatches(brands);
     
     // Add delay before processing queue
-    await sleep(5000);
+    await sleep(10000);
 
     // Process the embedding queue
     console.log(`\n[${new Date().toISOString()}] Processing embedding queue...`);
     await processEmbeddingQueue();
 
     // Final delay to ensure all operations complete
-    await sleep(5000);
+    await sleep(10000);
 
     console.log(`\n[${new Date().toISOString()}] === Update Complete ===`);
     console.log(`[${new Date().toISOString()}] Total brands processed: ${brands.length}`);
     console.log(`[${new Date().toISOString()}] ✅ Successfully queued: ${results.successCount} brands`);
     console.log(`[${new Date().toISOString()}] ❌ Failed to queue: ${results.failureCount}`);
+    if (results.failedBrands.length > 0) {
+      console.log(`[${new Date().toISOString()}] Failed brand IDs: ${results.failedBrands.join(', ')}`);
+    }
 
     // Exit successfully
     process.exit(0);
