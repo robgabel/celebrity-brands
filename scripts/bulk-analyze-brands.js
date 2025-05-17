@@ -59,32 +59,17 @@ async function analyzeBrand(brandId) {
 
 async function main() {
   try {
-    console.log('Fetching brands with NULL or empty product categories...\n');
+    console.log('Fetching brands with NULL logo URLs...\n');
     
-    // First query for NULL product categories
-    const { data: nullBrands, error: nullError } = await supabase
+    const { data: brands, error } = await supabase
       .from('brands')
       .select('id, name, product_category')
-      .is('product_category', null);
+      .is('logo_url', null);
 
-    if (nullError) throw nullError;
-
-    // Then query for empty string product categories
-    const { data: emptyBrands, error: emptyError } = await supabase
-      .from('brands')
-      .select('id, name, product_category')
-      .eq('product_category', '');
-
-    if (emptyError) throw emptyError;
-
-    // Combine results
-    const brands = [...(nullBrands || []), ...(emptyBrands || [])];
-
-    console.log(`Found ${nullBrands?.length || 0} brands with NULL product_category`);
-    console.log(`Found ${emptyBrands?.length || 0} brands with empty product_category`);
+    if (error) throw error;
 
     if (!brands.length) {
-      console.log('No brands found with NULL or empty product categories.');
+      console.log('No brands found with NULL logo URLs.');
       return;
     }
 
@@ -96,7 +81,7 @@ async function main() {
 
     for (const [index, brand] of brands.entries()) {
       console.log(`Processing ${index + 1}/${brands.length}: ${brand.name} (ID: ${brand.id})`);
-      console.log(`Current category: ${brand.product_category === null ? 'NULL' : brand.product_category === '' ? 'EMPTY' : brand.product_category}`);
+      console.log(`Current logo URL: NULL`);
       
       const result = await analyzeBrand(brand.id);
       
