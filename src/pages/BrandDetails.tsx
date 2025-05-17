@@ -403,14 +403,14 @@ export function BrandDetails() {
                     <h3 className="text-lg font-semibold text-gray-200 mb-2">Brand Story</h3>
                     <p className="text-gray-300 italic mb-4">{brand.brand_story.summary}</p>
                     {brand.last_story_update && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                         <span>Story written on {new Date(brand.last_story_update).toLocaleDateString()}</span>
                         <button
                           onClick={generateBrandStory}
                           disabled={isGeneratingStory}
                           className="text-teal-400 hover:text-teal-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
-                          {isGeneratingStory ? 'Refreshing...' : 'Refresh'}
+                          {isGeneratingStory ? 'Refreshing...' : 'Refresh Brand Story'}
                         </button>
                       </div>
                     )}
