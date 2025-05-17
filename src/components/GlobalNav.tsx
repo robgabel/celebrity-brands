@@ -42,7 +42,7 @@ export function GlobalNav({
           <Link to="/" className="text-xl font-bold text-teal-400 hover:text-teal-300 transition-colors">
             <span className="flex items-baseline gap-2">
               Celebrity Brands
-              <span className="text-sm font-normal text-gray-500">by Gabel.ai</span>
+              <span className="text-sm font-normal text-gray-500">by Rob Gabel</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center">
