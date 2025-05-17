@@ -12,11 +12,21 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are an expert market researcher specializing in celebrity and influencer brands. Your task is to find potential new brands based on the administrator's instructions.
 
 CRITICAL REQUIREMENTS:
-1. Only return brands that are OWNED or CO-OWNED by celebrities/influencers
-2. Exclude any brands where celebrities are ONLY endorsers or ambassadors
-3. Focus on finding LEGITIMATE, VERIFIABLE brands
-4. Return a maximum of 10 candidates
-5. Format response as a JSON array of objects with:
+1. Return response in this EXACT format:
+{
+  "candidates": [
+    {
+      "name": "Exact brand name",
+      "creators": "Full name(s) of the celebrity/influencer owner(s)",
+      "description": "1-2 sentences about the brand"
+    }
+  ]
+}
+
+2. Only return brands that are OWNED or CO-OWNED by celebrities/influencers
+3. Exclude any brands where celebrities are ONLY endorsers or ambassadors
+4. Focus on finding LEGITIMATE, VERIFIABLE brands
+5. Return a maximum of 10 candidates in the array with:
    - name: Exact brand name
    - creators: Full name(s) of the celebrity/influencer owner(s)
    - description: 1-2 sentences about the brand
@@ -72,8 +82,8 @@ serve(async (req: Request) => {
       model: "gpt-4.1",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `Find potential brands based on these instructions:
 
 ${instructions}
@@ -84,7 +94,7 @@ ${exclusionList}
 Remember to:
 1. Only include brands actually OWNED by celebrities/influencers
 2. Verify ownership claims
-3. Return results as a JSON array
+3. Return results in the exact JSON format specified
 4. Maximum 10 results`
         }
       ],
@@ -99,21 +109,29 @@ Remember to:
     // Parse and validate the response
     let candidates;
     try {
-      const parsed = JSON.parse(content);
-      candidates = Array.isArray(parsed.candidates) ? parsed.candidates : parsed;
+      const response = JSON.parse(content);
+      
+      if (!response.candidates || !Array.isArray(response.candidates)) {
+        throw new Error('Response missing candidates array');
+      }
+      
+      candidates = response.candidates;
       
       // Validate each candidate has required fields
-      candidates = candidates.filter(c => 
-        c.name && 
-        c.creators && 
-        c.description &&
-        typeof c.name === 'string' &&
-        typeof c.creators === 'string' &&
-        typeof c.description === 'string'
-      );
+      for (const candidate of candidates) {
+        if (!candidate.name || typeof candidate.name !== 'string') {
+          throw new Error('Invalid or missing name field');
+        }
+        if (!candidate.creators || typeof candidate.creators !== 'string') {
+          throw new Error('Invalid or missing creators field');
+        }
+        if (!candidate.description || typeof candidate.description !== 'string') {
+          throw new Error('Invalid or missing description field');
+        }
+      }
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
-      throw new Error('Invalid response format from OpenAI');
+      throw new Error(`Invalid response format from OpenAI: ${error.message}`);
     }
 
     return new Response(
