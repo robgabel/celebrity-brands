@@ -10,8 +10,9 @@ const REQUEST_TIMEOUT = 10000; // 10 second timeout
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Accept, X-Requested-With',
-  'Access-Control-Max-Age': '86400'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control',
+  'Access-Control-Max-Age': '86400',
+  'Access-Control-Expose-Headers': 'Cache-Control'
 };
 
 // Add jitter to retry delay
@@ -64,8 +65,8 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
         const retryAfter = response.headers.get('Retry-After');
         if (retryAfter) {
           const delay = parseInt(retryAfter) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
+          ...(statusCode === 429 ? { 'Retry-After': '300', 'Cache-Control': 'no-store' } : { 'Cache-Control': 'no-cache' }),
+          'Vary': 'Origin, Accept-Encoding'
         }
       }
 
@@ -228,8 +229,8 @@ serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Vary': 'Origin'
+        'Cache-Control': 'public, max-age=300',
+        'Vary': 'Origin, Accept-Encoding'
       }
     });
   } catch (error) {

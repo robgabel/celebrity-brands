@@ -29,35 +29,15 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
     console.log('Fetching fresh page views for:', brandName);
 
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wikipedia-pageviews`;
-    const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}&_=${Date.now()}`, {
+    const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}`, {
       headers: {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Accept': 'application/json',
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Cache-Control': 'no-cache'
       }
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      
-      if (response.status === 404) {
-        return {
-          interest: [],
-          averageInterest: 0,
-          maxInterest: 0,
-          minInterest: 0,
-          articleTitle: brandName,
-          source: 'Wikipedia Page Views',
-          dataAvailable: false
-        };
-      }
-      
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again in a few minutes.');
-      }
-      
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
       
       if (response.status === 404) {
@@ -99,14 +79,8 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
       throw new Error('Unable to connect to Wikipedia service. Please try again later.');
     }
 
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      throw new Error('Unable to connect to Wikipedia service. Please try again later.');
-    }
-
     if (error.message?.includes('not found')) {
       throw new Error(`No Wikipedia data available for "${brandName}"`);
-    } else if (error.message?.includes('rate limit')) {
-      throw new Error('Rate limit exceeded. Please try again in a few minutes.');
     } else if (error.message?.includes('rate limit')) {
       throw new Error('Rate limit exceeded. Please try again in a few minutes.');
     }
