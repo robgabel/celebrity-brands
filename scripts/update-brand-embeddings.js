@@ -22,10 +22,11 @@ console.log('Initializing Supabase client...');
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('Supabase client initialized');
 
-// Delay between API calls to avoid rate limiting
-const DELAY_BETWEEN_CALLS = 2000; // 2 seconds
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
+// Enhanced configuration for retries and delays
+const DELAY_BETWEEN_CALLS = 5000; // Increased to 5 seconds
+const MAX_RETRIES = 5; // Increased from 3 to 5
+const INITIAL_RETRY_DELAY = 2000; // Increased to 2 seconds
+const MAX_CONCURRENT_REQUESTS = 3; // Limit concurrent requests
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -35,9 +36,16 @@ async function updateBrandEmbedding(brandId, retryCount = 0) {
   try {
     console.log(`[${new Date().toISOString()}] Updating embedding for brand ID ${brandId}...`);
     
-    // Call the update_brand_embedding function
+    // Add timeout to the fetch request
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    // Call the update_brand_embedding function with timeout
     const { data, error } = await supabase
-      .rpc('update_brand_embedding', { brand_id: brandId });
+      .rpc('update_brand_embedding', { brand_id: brandId })
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeout);
 
     if (error) {
       console.error(`[${new Date().toISOString()}] RPC error:`, error);
@@ -49,7 +57,13 @@ async function updateBrandEmbedding(brandId, retryCount = 0) {
   } catch (error) {
     console.error(`[${new Date().toISOString()}] ❌ Failed to update embedding for brand ID ${brandId}:`, error.message || error);
     
-    // Implement exponential backoff retry
+    // Check if error is due to timeout or network issues
+    if (error.name === 'AbortError' || error.message?.includes('fetch failed')) {
+      console.log(`[${new Date().toISOString()}] Network or timeout error detected, implementing longer delay...`);
+      await sleep(5000); // Additional delay for network issues
+    }
+    
+    // Implement exponential backoff retry with increased delays
     if (retryCount < MAX_RETRIES) {
       const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       console.log(`[${new Date().toISOString()}] Retrying in ${retryDelay/1000} seconds... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
@@ -66,6 +80,11 @@ async function processEmbeddingQueue() {
     console.log(`[${new Date().toISOString()}] Processing embedding queue...`);
     
     console.log(`[${new Date().toISOString()}] Making request to update-embeddings function...`);
+    
+    // Add timeout to the fetch request
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
     const response = await fetch(
       `${SUPABASE_URL}/functions/v1/update-embeddings`,
       {
@@ -73,9 +92,12 @@ async function processEmbeddingQueue() {
         headers: {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
       }
     );
+
+    clearTimeout(timeout);
 
     console.log(`[${new Date().toISOString()}] Response status:`, response.status);
     const data = await response.json();
@@ -92,6 +114,31 @@ async function processEmbeddingQueue() {
     console.error('Full error:', error);
     return null;
   }
+}
+
+async function processBrandsInBatches(brands) {
+  const batchSize = MAX_CONCURRENT_REQUESTS;
+  const results = {
+    successCount: 0,
+    failureCount: 0
+  };
+
+  for (let i = 0; i < brands.length; i += batchSize) {
+    const batch = brands.slice(i, i + batchSize);
+    const promises = batch.map(brand => updateBrandEmbedding(brand.id));
+    
+    const batchResults = await Promise.all(promises);
+    
+    results.successCount += batchResults.filter(result => result).length;
+    results.failureCount += batchResults.filter(result => !result).length;
+
+    // Add delay between batches
+    if (i + batchSize < brands.length) {
+      await sleep(DELAY_BETWEEN_CALLS);
+    }
+  }
+
+  return results;
 }
 
 async function main() {
@@ -115,28 +162,9 @@ async function main() {
     }
 
     console.log(`\n[${new Date().toISOString()}] Total brands to update: ${brands.length}`);
-    console.log(`[${new Date().toISOString()}] Starting updates...\n`);
+    console.log(`[${new Date().toISOString()}] Starting updates in batches...\n`);
     
-    let successCount = 0;
-    let failureCount = 0;
-
-    // Queue embedding updates for all brands
-    for (const [index, brand] of brands.entries()) {
-      console.log(`Processing ${index + 1}/${brands.length}: ${brand.name} (ID: ${brand.id})`);
-      
-      const success = await updateBrandEmbedding(brand.id);
-      
-      if (success) {
-        successCount++;
-      } else {
-        failureCount++;
-      }
-
-      // Wait between calls to avoid rate limiting
-      if (index < brands.length - 1) {
-        await sleep(DELAY_BETWEEN_CALLS);
-      }
-    }
+    const results = await processBrandsInBatches(brands);
 
     // Process the embedding queue
     console.log(`\n[${new Date().toISOString()}] Processing embedding queue...`);
@@ -144,8 +172,8 @@ async function main() {
 
     console.log(`\n[${new Date().toISOString()}] === Update Complete ===`);
     console.log(`[${new Date().toISOString()}] Total brands processed: ${brands.length}`);
-    console.log(`[${new Date().toISOString()}] ✅ Successfully queued: ${successCount} brands`);
-    console.log(`[${new Date().toISOString()}] ❌ Failed to queue: ${failureCount}`);
+    console.log(`[${new Date().toISOString()}] ✅ Successfully queued: ${results.successCount} brands`);
+    console.log(`[${new Date().toISOString()}] ❌ Failed to queue: ${results.failureCount}`);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Script failed:`, error);
     console.error('Full error:', error);
