@@ -65,3 +65,4 @@ export function AdminRibbon() {
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-teal-500 to-transparent animate-pulse" />
     </div>
   );
+}
