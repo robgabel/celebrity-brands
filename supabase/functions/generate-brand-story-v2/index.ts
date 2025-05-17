@@ -11,10 +11,6 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are a business journalist writing for Fortune magazine. 
 Write a compelling "From Zero to Hero" narrative about the brand. Each section must start with its header as a standalone paragraph, followed by the content in separate paragraphs.
 
-Each section must be wrapped in HTML tags:
-- Section headers must be wrapped in <h2> tags and include a class for styling
-- Paragraphs must be wrapped in <p> tags
-
 Follow this structure, ensuring each header appears alone before its content:
 
 The Spark & The Stakes
@@ -49,7 +45,7 @@ CRITICAL REQUIREMENTS:
 Format the response as a JSON object with these keys:
 {
   "summary": "A brief 2-3 sentence overview",
-  "full_story": ["<h2 class='text-xl font-bold text-gray-100 mt-8 mb-4'>Section Header</h2>", "<p>Content Paragraph</p>", "<h2 class='text-xl font-bold text-gray-100 mt-8 mb-4'>Next Section Header</h2>", "<p>Content Paragraph</p>", ...],
+  "full_story": ["Section Header", "Content Paragraph", "Next Section Header", "Content Paragraph", ...],
   "metrics": {"metric1": "value1", "metric2": "value2"},
   "key_events": ["Event 1", "Event 2", "Event 3"],
   "lessons_learned": ["Lesson 1", "Lesson 2", "Lesson 3"],
@@ -60,10 +56,9 @@ Format the response as a JSON object with these keys:
   }
 }
 
-CRITICAL:
-- Each section header MUST be wrapped in <h2> tags with proper styling classes
-- Each content paragraph MUST be wrapped in <p> tags
-- Headers and paragraphs must alternate in the full_story array
+IMPORTANT:
+- Each section header MUST be its own paragraph in the full_story array
+- Content paragraphs MUST follow their respective headers
 - Each paragraph should be substantial (150-200 words)
 - Include specific dates, metrics, and milestones whenever possible
 - Maintain a clear narrative arc that shows the brand's transformation
