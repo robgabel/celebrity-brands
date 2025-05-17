@@ -379,11 +379,9 @@ export function ExplorePage() {
                   <thead>
                     <tr className="bg-gray-800/50">
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Brand</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Creators</th>
-                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Rank</th>
-                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Score</th>
-                      <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[10%]">Trend</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[40%]">Description</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[20%]">Creators</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Category</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[42%]">Description</th>
                       <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[8%]">Actions</th>
                     </tr>
                   </thead>
@@ -426,35 +424,10 @@ export function ExplorePage() {
                               {brand.creators}
                             </div>
                           </td>
-                          <td className="px-3 py-4 text-center">
-                            <span className="text-gray-300">
-                              #{brand.brand_rankings?.[0]?.rank || '-'}
+                          <td className="px-3 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(brand.product_category).bg} ${getCategoryColor(brand.product_category).text}`}>
+                              {brand.product_category}
                             </span>
-                          </td>
-                          <td className="px-3 py-4 text-center">
-                            <span className="text-gray-300">
-                              {brand.brand_rankings?.[0]?.ranking_score?.toFixed(1) || '-'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-4 text-center">
-                            {brand.brand_rankings?.[0]?.trend_pct ? (
-                              <div className={`flex items-center justify-center ${
-                                brand.brand_rankings[0].trend_pct > 0 
-                                  ? 'text-green-400' 
-                                  : brand.brand_rankings[0].trend_pct < 0 
-                                    ? 'text-red-400' 
-                                    : 'text-gray-400'
-                              }`}>
-                                {brand.brand_rankings[0].trend_pct > 0 ? (
-                                  <TrendingUp className="w-4 h-4 mr-1" />
-                                ) : brand.brand_rankings[0].trend_pct < 0 ? (
-                                  <TrendingDown className="w-4 h-4 mr-1" />
-                                ) : null}
-                                {Math.abs(brand.brand_rankings[0].trend_pct)}%
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">-</span>
-                            )}
                           </td>
                           <td className="px-3 py-4">
                             <div className="text-sm text-gray-300 line-clamp-2">
