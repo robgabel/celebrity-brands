@@ -419,10 +419,20 @@ export function BrandDetails() {
                 <img
                   src={brand.logo_url}
                   alt={`${brand.name} logo`}
-                  className="w-24 h-24 object-contain"
+                  className="w-24 h-24 object-contain bg-gray-700/50 rounded-lg p-2"
                   onError={(e) => {
-                    console.error('Error loading brand logo:', e);
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    // Remove the broken image
+                    const img = e.target as HTMLImageElement;
+                    img.style.display = 'none';
+                    
+                    // Show brand initial as fallback
+                    const parent = img.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-24 h-24 bg-gray-700/50 rounded-lg flex items-center justify-center text-3xl font-bold text-gray-400';
+                      fallback.textContent = brand.name.charAt(0).toUpperCase();
+                      parent.appendChild(fallback);
+                    }
                   }}
                 />
               )}
