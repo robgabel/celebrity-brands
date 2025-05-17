@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT = 10000; // 10 second timeout
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Accept',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Accept, X-Requested-With',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -26,11 +26,13 @@ function getRetryDelay(attempt: number): number {
 async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
   let lastError: Error | null = null;
 
+  // Add User-Agent to headers
   const finalOptions = {
     ...options,
     headers: {
       ...options.headers,
-      'User-Agent': USER_AGENT
+      'User-Agent': USER_AGENT,
+      'Api-User-Agent': USER_AGENT
     }
   };
 
@@ -46,18 +48,18 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
 
       clearTimeout(timeoutId);
       
-      // Only retry on specific error codes
+      // Return 404 responses immediately
       if (response.ok || response.status === 404) {
         return response;
       }
 
-      // Determine if we should retry based on status code
+      // Retry on server errors and rate limits
       const shouldRetry = [429, 500, 502, 503, 504].includes(response.status);
       if (!shouldRetry) {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      // For rate limits, use the Retry-After header if available
+      // Handle rate limits with Retry-After header
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
         if (retryAfter) {
@@ -67,7 +69,8 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
         }
       }
 
-      throw new Error(`Retryable error: HTTP ${response.status}`);
+      // Add status code to error for better handling
+      throw new Error(`HTTP ${response.status}`);
     } catch (error) {
       console.error(`Attempt ${attempt + 1} failed:`, error);
       lastError = error;
@@ -88,7 +91,8 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
     }
   }
 
-  throw lastError || new Error('All retry attempts failed');
+  // Include original error message
+  throw lastError || new Error('Maximum retry attempts exceeded');
 }
 
 // Cache configuration
@@ -135,16 +139,7 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const query = url.searchParams.get('query');
 
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-      });
-    }
-
     if (!query) {
-      throw new Error('Query parameter is required');
       return new Response(JSON.stringify({
         error: 'Query parameter is required',
         timestamp: new Date().toISOString()
@@ -233,7 +228,7 @@ serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': `public, max-age=${CACHE_TTL / 1000}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Vary': 'Origin'
       }
     });
@@ -252,6 +247,9 @@ serve(async (req: Request) => {
     } else if (error.message?.includes('rate limit') || error.message?.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
+    } else if (error.message?.includes('Maximum retry attempts')) {
+      statusCode = 503;
+      errorMessage = 'Service temporarily unavailable. Please try again later.';
     }
     
     return new Response(JSON.stringify({
@@ -262,7 +260,8 @@ serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        ...(statusCode === 429 ? { 'Retry-After': '60' } : {})
+        ...(statusCode === 429 ? { 'Retry-After': '300' } : {}),
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     });
   }
