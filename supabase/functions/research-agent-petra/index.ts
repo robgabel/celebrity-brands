@@ -5,7 +5,8 @@ import OpenAI from "npm:openai@4.28.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+  'Access-Control-Max-Age': '86400'
 };
 
 const SYSTEM_PROMPT = `You are an expert market researcher specializing in celebrity and influencer brands. Your task is to find potential new brands based on the administrator's instructions.
@@ -118,9 +119,11 @@ Remember to:
     return new Response(
       JSON.stringify(candidates),
       {
+        status: 200,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         }
       }
     );
@@ -136,7 +139,8 @@ Remember to:
         status: error.message.includes('required') ? 400 : 500,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         }
       }
     );

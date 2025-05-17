@@ -29,11 +29,24 @@ export function AgentBossControlCenter() {
     setCandidates([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke('research-agent-petra', {
-        body: { instructions: instructions.trim() }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-agent-petra`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ instructions: instructions.trim() })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       setCandidates(data);
       setPetraStatus('ready');
