@@ -27,6 +27,18 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('form')) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const debouncedSearch = useDebounce(searchQuery, 300);
   
   useEffect(() => {
@@ -391,17 +403,5 @@ export function HomePage() {
       </div>
       <Footer />
     </div>
-  );
+  ); 
 }
-
-// Close suggestions when clicking outside
-useEffect(() => {
-  const handleClickOutside = (e: MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('form')) {
-      setShowSuggestions(false);
-    }
-  };
-
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
