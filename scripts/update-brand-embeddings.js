@@ -17,12 +17,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Delay between API calls to avoid rate limiting
 const DELAY_BETWEEN_CALLS = 2000; // 2 seconds
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function updateBrandEmbedding(brandId) {
+async function updateBrandEmbedding(brandId, retryCount = 0) {
   try {
     console.log(`Updating embedding for brand ID ${brandId}...`);
     
@@ -36,6 +38,15 @@ async function updateBrandEmbedding(brandId) {
     return true;
   } catch (error) {
     console.error(`❌ Failed to update embedding for brand ID ${brandId}:`, error.message || error);
+    
+    // Implement exponential backoff retry
+    if (retryCount < MAX_RETRIES) {
+      const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.log(`Retrying in ${retryDelay/1000} seconds... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      await sleep(retryDelay);
+      return updateBrandEmbedding(brandId, retryCount + 1);
+    }
+    
     return false;
   }
 }
