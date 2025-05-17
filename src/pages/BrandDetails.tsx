@@ -403,9 +403,16 @@ export function BrandDetails() {
                     <h3 className="text-lg font-semibold text-gray-200 mb-2">Brand Story</h3>
                     <p className="text-gray-300 italic mb-4">{brand.brand_story.summary}</p>
                     {brand.last_story_update && (
-                      <p className="text-sm text-gray-500 mb-4">
-                        Story written on {new Date(brand.last_story_update).toLocaleDateString()}
-                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                        <span>Story written on {new Date(brand.last_story_update).toLocaleDateString()}</span>
+                        <button
+                          onClick={generateBrandStory}
+                          disabled={isGeneratingStory}
+                          className="text-teal-400 hover:text-teal-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+                        >
+                          {isGeneratingStory ? 'Refreshing...' : 'Refresh'}
+                        </button>
+                      </div>
                     )}
                     <div className="space-y-4">
                       {Array.isArray(brand.brand_story.full_story) ? brand.brand_story.full_story.map((paragraph, index) => (
