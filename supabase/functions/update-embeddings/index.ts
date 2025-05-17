@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.7";
 import OpenAI from "npm:openai@4.28.0";
+import { backOff } from "npm:exponential-backoff@3.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,33 +9,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
-const MAX_RETRY_DELAY = 5000; // 5 seconds
-
-async function retryWithExponentialBackoff(operation: () => Promise<any>, retries = MAX_RETRIES) {
-  let lastError;
-  
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      console.error(`Attempt ${attempt + 1} failed:`, error);
-      
-      if (attempt < retries - 1) {
-        const delay = Math.min(
-          INITIAL_RETRY_DELAY * Math.pow(2, attempt),
-          MAX_RETRY_DELAY
-        );
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  throw lastError;
-}
+// Backoff configuration
+const backoffConfig = {
+  numOfAttempts: 3,
+  startingDelay: 1000,
+  maxDelay: 5000,
+  timeMultiple: 2,
+  jitter: 'full'
+};
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -81,31 +63,32 @@ serve(async (req: Request) => {
     for (const item of pendingItems) {
       try {
         // Generate embedding with retry
-        const embedding = await retryWithExponentialBackoff(async () => {
+        const embedding = await backOff(async () => {
           const response = await openai.embeddings.create({
             model: "text-embedding-ada-002",
             input: item.text_for_embedding.trim()
           });
+          }, backoffConfig);
 
           if (!response.data[0]?.embedding) {
             throw new Error('Empty embedding response');
           }
 
           return response;
-        });
+        }, backoffConfig);
 
         // Update brand with new embedding
-        await retryWithExponentialBackoff(async () => {
+        await backOff(async () => {
           const { error: updateError } = await supabase
             .from('brands')
             .update({ embedding: embedding.data[0].embedding })
             .eq('id', item.record_id);
 
           if (updateError) throw updateError;
-        });
+        }, backoffConfig);
 
         // Mark queue item as processed
-        await retryWithExponentialBackoff(async () => {
+        await backOff(async () => {
           const { error: queueError } = await supabase
             .from('embedding_queue')
             .update({
@@ -115,13 +98,14 @@ serve(async (req: Request) => {
             .eq('id', item.id);
 
           if (queueError) throw queueError;
-        });
+        }, backoffConfig);
 
         results.success++;
         console.log(`✅ Successfully updated embedding for brand ${item.record_id}`);
       } catch (err) {
         results.failed++;
-        results.errors.push(`Brand ${item.record_id}: ${err.message}`);
+        const errorMsg = `Brand ${item.record_id}: ${err.message || 'Unknown error'}`;
+        results.errors.push(errorMsg);
         console.error(`Error processing brand ${item.record_id}:`, err);
 
         // Mark queue item as failed
@@ -130,7 +114,7 @@ serve(async (req: Request) => {
             .from('embedding_queue')
             .update({
               status: 'error',
-              error: err.message,
+              error: err.message || 'Unknown error',
               processed_at: new Date().toISOString()
             })
             .eq('id', item.id);
@@ -162,7 +146,7 @@ serve(async (req: Request) => {
     
     return new Response(
       JSON.stringify({
-        error: error.message || 'Failed to update embeddings',
+        error: error?.message || 'Failed to update embeddings',
         timestamp: new Date().toISOString()
       }),
       {
