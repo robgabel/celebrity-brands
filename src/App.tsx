@@ -7,6 +7,8 @@ import { SignUp } from './pages/SignUp';
 import { Profile } from './pages/Profile';
 import { BrandDetails } from './pages/BrandDetails';
 import { AuthGuard } from './components/AuthGuard';
+import { AdminGuard } from './components/AdminGuard';
+import { AgentBossControlCenter } from './pages/AgentBossControlCenter';
 
 function App() {
   return (
@@ -18,6 +20,14 @@ function App() {
         <Route path="/brands/:brandSlug" element={<BrandDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route 
+          path="/admin/agent-boss-control-center" 
+          element={
+            <AdminGuard>
+              <AgentBossControlCenter />
+            </AdminGuard>
+          } 
+        />
         <Route 
           path="/profile" 
           element={

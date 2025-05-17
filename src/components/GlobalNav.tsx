@@ -4,6 +4,8 @@ import { Search } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 import { Button } from './Button';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
+import { AdminRibbon } from './AdminRibbon';
 
 interface GlobalNavProps {
   showFavoritesToggle?: boolean;
@@ -19,6 +21,7 @@ export function GlobalNav({
   hasFavorites = false
 }: GlobalNavProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAdmin } = useAuthStore();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -37,6 +40,7 @@ export function GlobalNav({
 
   return (
     <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50">
+      {isAdmin && <AdminRibbon />}
       <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center space-x-8">
           <Link to="/" className="text-xl font-bold text-teal-400 hover:text-teal-300 transition-colors">
