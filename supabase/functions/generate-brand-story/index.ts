@@ -11,9 +11,9 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are a business journalist writing for Fortune magazine. 
 Write a comprehensive, in-depth narrative about the brand. Your story must thoroughly cover:
 
-  Each section must be wrapped in HTML tags:
-  - Section headers must be wrapped in <h3> tags
-  - Paragraphs must be wrapped in <p> tags
+Each section must be wrapped in HTML tags:
+- Section headers must be wrapped in <h2> tags and include a class for styling
+- Paragraphs must be wrapped in <p> tags
   
   Cover these topics:
   
@@ -75,12 +75,12 @@ Aim for at least 6-8 well-developed paragraphs that tell a complete story.
 Format the response as a JSON object with these keys:
 {
   "summary": "A brief 2-3 sentence overview",
-  "full_story": ["<h3>Section Title</h3>", "<p>First paragraph</p>", "<h3>Next Section</h3>", "<p>Next paragraph</p>", ...],
+  "full_story": ["<h2 class='text-xl font-bold text-gray-100 mt-8 mb-4'>Section Title</h2>", "<p>First paragraph</p>", "<h2 class='text-xl font-bold text-gray-100 mt-8 mb-4'>Next Section</h2>", "<p>Next paragraph</p>", ...],
   "metrics": {"metric1": "value1", "metric2": "value2"},
   "key_events": ["Event 1", "Event 2", "Event 3"]
 }
 
-The full_story MUST be an array of HTML-wrapped content, alternating between <h3> headers and <p> paragraphs.
+The full_story MUST be an array of HTML-wrapped content, alternating between styled <h2> headers and <p> paragraphs.
 Each paragraph should be substantial (100-200 words) and focus on a specific aspect.
 Ensure smooth transitions between paragraphs to maintain narrative flow.
 `;

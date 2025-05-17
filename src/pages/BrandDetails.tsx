@@ -456,8 +456,8 @@ export function BrandDetails() {
                       {Array.isArray(brand.brand_story.full_story) ? brand.brand_story.full_story.map((paragraph, index) => (
                         <div 
                           key={index} 
-                          dangerouslySetInnerHTML={{ __html: paragraph }}
-                          className="[&>h3]:font-bold [&>h3]:text-xl [&>h3]:text-gray-100 [&>h3]:mt-8 [&>h3]:mb-4 [&>p]:text-gray-300"
+                          dangerouslySetInnerHTML={{ __html: paragraph }} 
+                          className="[&>p]:text-gray-300"
                         >
                         </div>
                       )) : (
