@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
+// Constants for retry and rate limiting
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 5000; // 5 seconds
+const MAX_RETRY_DELAY = 30000; // 30 seconds
+const BATCH_SIZE = 2; // Process fewer brands at once
+const DELAY_BETWEEN_BATCHES = 10000; // 10 seconds between batches
+
 console.log('Starting brand embeddings update script...');
 
 // Load environment variables
@@ -22,14 +29,17 @@ console.log('Initializing Supabase client...');
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('Supabase client initialized');
 
-// Enhanced configuration for retries and delays
-const DELAY_BETWEEN_CALLS = 5000; // Increased to 5 seconds
-const MAX_RETRIES = 5; // Increased from 3 to 5
-const INITIAL_RETRY_DELAY = 2000; // Increased to 2 seconds
-const MAX_CONCURRENT_REQUESTS = 3; // Limit concurrent requests
-
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Add jitter to retry delay to prevent thundering herd
+function getRetryDelay(attempt) {
+  const baseDelay = Math.min(
+    INITIAL_RETRY_DELAY * Math.pow(2, attempt),
+    MAX_RETRY_DELAY
+  );
+  return baseDelay + Math.random() * 2000; // Add up to 2s of jitter
 }
 
 async function updateBrandEmbedding(brandId, retryCount = 0) {
@@ -38,7 +48,7 @@ async function updateBrandEmbedding(brandId, retryCount = 0) {
     
     // Add timeout to the fetch request
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     // Call the update_brand_embedding function with timeout
     const { data, error } = await supabase
@@ -65,7 +75,7 @@ async function updateBrandEmbedding(brandId, retryCount = 0) {
     
     // Implement exponential backoff retry with increased delays
     if (retryCount < MAX_RETRIES) {
-      const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      const retryDelay = getRetryDelay(retryCount);
       console.log(`[${new Date().toISOString()}] Retrying in ${retryDelay/1000} seconds... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
       await sleep(retryDelay);
       return updateBrandEmbedding(brandId, retryCount + 1);
@@ -116,7 +126,7 @@ async function processEmbeddingQueue() {
   }
 }
 
-async function processBrandsInBatches(brands) {
+async function processBrandsInBatches(brands, batchSize = BATCH_SIZE) {
   const batchSize = MAX_CONCURRENT_REQUESTS;
   const results = {
     successCount: 0,
@@ -125,14 +135,16 @@ async function processBrandsInBatches(brands) {
 
   for (let i = 0; i < brands.length; i += batchSize) {
     const batch = brands.slice(i, i + batchSize);
-    const promises = batch.map(brand => updateBrandEmbedding(brand.id));
+    console.log(`\n[${new Date().toISOString()}] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(brands.length/batchSize)}`);
     
-    const batchResults = await Promise.all(promises);
-    
+    // Process brands in batch sequentially to avoid overwhelming the API
+    const batchResults = await Promise.all(
+      batch.map(brand => updateBrandEmbedding(brand.id))
+    );
+
     results.successCount += batchResults.filter(result => result).length;
     results.failureCount += batchResults.filter(result => !result).length;
 
-    // Add delay between batches
     if (i + batchSize < brands.length) {
       await sleep(DELAY_BETWEEN_CALLS);
     }
@@ -165,23 +177,29 @@ async function main() {
     console.log(`[${new Date().toISOString()}] Starting updates in batches...\n`);
     
     const results = await processBrandsInBatches(brands);
+    
+    // Add delay before processing queue
+    await sleep(5000);
 
     // Process the embedding queue
     console.log(`\n[${new Date().toISOString()}] Processing embedding queue...`);
     await processEmbeddingQueue();
 
+    // Final delay to ensure all operations complete
+    await sleep(5000);
+
     console.log(`\n[${new Date().toISOString()}] === Update Complete ===`);
     console.log(`[${new Date().toISOString()}] Total brands processed: ${brands.length}`);
     console.log(`[${new Date().toISOString()}] ✅ Successfully queued: ${results.successCount} brands`);
     console.log(`[${new Date().toISOString()}] ❌ Failed to queue: ${results.failureCount}`);
+
+    // Exit successfully
+    process.exit(0);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Script failed:`, error);
     console.error('Full error:', error);
     process.exit(1);
   }
-}
-
-console.log(`[${new Date().toISOString()}] Script loaded, running main function...`);
 
 // Run the script
 main().catch(error => {
