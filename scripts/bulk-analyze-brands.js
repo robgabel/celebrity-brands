@@ -52,32 +52,32 @@ async function analyzeBrand(brandId) {
 
 async function main() {
   try {
-    console.log('Fetching brands with NULL descriptions...');
+    console.log('Fetching brands with NULL product categories...');
     
-    // First query for NULL descriptions
+    // First query for NULL product categories
     const { data: nullBrands, error: nullError } = await supabase
       .from('brands')
       .select('id, name')
-      .is('description', null);
+      .is('product_category', null);
 
     if (nullError) throw nullError;
 
-    // Then query for empty string descriptions
+    // Then query for empty string product categories
     const { data: emptyBrands, error: emptyError } = await supabase
       .from('brands')
       .select('id, name')
-      .eq('description', '');
+      .eq('product_category', '');
 
     if (emptyError) throw emptyError;
 
     // Combine results
     const brands = [...(nullBrands || []), ...(emptyBrands || [])];
 
-    console.log('NULL descriptions:', nullBrands?.length || 0);
-    console.log('Empty descriptions:', emptyBrands?.length || 0);
+    console.log('NULL product categories:', nullBrands?.length || 0);
+    console.log('Empty product categories:', emptyBrands?.length || 0);
 
     if (!brands.length) {
-      console.log('No brands found with NULL or empty descriptions.');
+      console.log('No brands found with NULL or empty product categories.');
       return;
     }
 
