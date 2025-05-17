@@ -5,13 +5,15 @@ import OpenAI from "npm:openai@4.28.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+  'Access-Control-Max-Age': '86400'
 };
 
 // Retry configuration
-const MAX_RETRIES = 5;
-const INITIAL_DELAY = 2000;
-const MAX_DELAY = 30000;
+const MAX_RETRIES = 3;
+const INITIAL_DELAY = 1000;
+const MAX_DELAY = 10000;
+const BATCH_SIZE = 2;
 
 async function retryWithExponentialBackoff<T>(
   operation: () => Promise<T>,
@@ -72,8 +74,8 @@ serve(async (req: Request) => {
     const { data: pendingItems, error: queueError } = await supabase
       .from('embedding_queue')
       .select('id, record_id, text_for_embedding')
-      .eq('status', 'pending')
-      .limit(3); // Process in smaller batches
+      .eq('status', 'pending') 
+      .limit(BATCH_SIZE);
 
     if (queueError) throw queueError;
     if (!pendingItems?.length) {
@@ -149,8 +151,8 @@ serve(async (req: Request) => {
         results.success++;
         console.log(`✅ Successfully updated embedding for brand ${item.record_id}`);
         
-        // Add delay between processing items
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Add longer delay between items
+        await new Promise(resolve => setTimeout(resolve, 3000));
       } catch (err) {
         results.failed++;
         const errorMsg = `Brand ${item.record_id}: ${err.message || 'Unknown error'}`;
@@ -171,8 +173,8 @@ serve(async (req: Request) => {
           console.error('Failed to update queue status:', updateErr);
         }
 
-        // Add longer delay after error
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Add much longer delay after error
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
 

@@ -3,12 +3,13 @@ import axios from 'axios';
 import { backOff } from 'exponential-backoff';
 import dotenv from 'dotenv';
 
-// Constants for retry and rate limiting
-const MAX_RETRIES = 3;
+// Enhanced retry configuration
+const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 1000;
 const MAX_RETRY_DELAY = 5000;
-const BATCH_SIZE = 3;
-const DELAY_BETWEEN_BATCHES = 3000;
+const BATCH_SIZE = 2;
+const DELAY_BETWEEN_BATCHES = 5000;
+const DELAY_BETWEEN_BRANDS = 3000;
 
 console.log('\nStarting brand embeddings update script...');
 
@@ -32,9 +33,11 @@ const api = axios.create({
   baseURL: SUPABASE_URL,
   headers: {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
-  validateStatus: (status) => status < 500 // Only retry on 5xx errors
+  validateStatus: (status) => status >= 200 && status < 500, // Don't retry on 5xx errors
+  timeout: 60000 // 60 second timeout
 });
 
 async function sleep(ms) {
@@ -121,9 +124,14 @@ async function processBrandsInBatches(brands) {
       if (success) {
         results.successCount++;
       } else {
+        console.log(`Waiting ${DELAY_BETWEEN_BRANDS/1000}s after failure...`);
+        await sleep(DELAY_BETWEEN_BRANDS);
         results.failureCount++;
       }
-      await sleep(2000); // Reduced delay between brands
+      
+      // Add longer delay between brands
+      console.log(`Waiting ${DELAY_BETWEEN_BRANDS/1000}s before next brand...`);
+      await sleep(DELAY_BETWEEN_BRANDS);
     }
 
     if (i + BATCH_SIZE < brands.length) {
@@ -160,14 +168,16 @@ async function main() {
     const results = await processBrandsInBatches(brands);
     
     // Add delay before processing queue
-    await sleep(10000);
+    console.log('\nWaiting 15s before processing queue...');
+    await sleep(15000);
 
     // Process the queue
     console.log('\nProcessing embedding queue...');
     await processEmbeddingQueue();
 
     // Final delay to ensure all operations complete
-    await sleep(10000);
+    console.log('\nWaiting 15s for final operations...');
+    await sleep(15000);
 
     console.log('\n=== Update Complete ===');
     console.log(`Total brands processed: ${brands.length}`);
