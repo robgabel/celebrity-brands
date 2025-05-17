@@ -127,7 +127,6 @@ async function processEmbeddingQueue() {
 }
 
 async function processBrandsInBatches(brands, batchSize = BATCH_SIZE) {
-  const batchSize = MAX_CONCURRENT_REQUESTS;
   const results = {
     successCount: 0,
     failureCount: 0
@@ -146,7 +145,7 @@ async function processBrandsInBatches(brands, batchSize = BATCH_SIZE) {
     results.failureCount += batchResults.filter(result => !result).length;
 
     if (i + batchSize < brands.length) {
-      await sleep(DELAY_BETWEEN_CALLS);
+      await sleep(DELAY_BETWEEN_BATCHES);
     }
   }
 
