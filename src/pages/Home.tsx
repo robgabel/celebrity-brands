@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Calendar, X } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { BrandCard } from '../components/BrandCard';
 import { getCategoryIcon } from '../lib/categoryUtils';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
-import { useDebounce } from '../hooks/useDebounce';
+import { SemanticSearchBox } from '../components/SemanticSearchBox';
 import type { Brand } from '../types/brand';
 
 interface SearchSuggestion {
@@ -138,6 +138,8 @@ export function HomePage() {
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
             Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities, creators and influencers.
           </p>
+          
+          <SemanticSearchBox />
           
           <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
             <Link 
