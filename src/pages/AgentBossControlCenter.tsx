@@ -64,16 +64,25 @@ export function AgentBossControlCenter() {
     ));
 
     try {
-      // First get the maximum existing ID
-      const { data: maxIdData, error: maxIdError } = await supabase
+      // Get the next ID from the brands_id_seq sequence
+      const { data: seqData, error: seqError } = await supabase
+        .rpc('next_brand_id');
+
+      if (seqError) throw seqError;
+      if (!seqData) throw new Error('Failed to get next brand ID');
+
+      const nextId = seqData;
+
+      // Verify the ID is available
+      const { data: existingBrand, error: checkError } = await supabase
         .from('brands')
         .select('id')
-        .order('id', { ascending: false })
-        .limit(1);
+        .eq('id', nextId)
+        .single();
 
-      if (maxIdError) throw maxIdError;
-
-      const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
+      if (checkError?.code !== 'PGRST116') { // PGRST116 means no rows returned
+        throw new Error('ID conflict detected');
+      }
 
       // Now insert the brand with the next available ID
       const { data: newBrand, error: insertError } = await supabase
