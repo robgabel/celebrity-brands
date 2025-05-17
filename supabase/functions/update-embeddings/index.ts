@@ -41,7 +41,7 @@ serve(async (req: Request) => {
       .from('embedding_queue')
       .select('id, record_id, text_for_embedding')
       .eq('status', 'pending')
-      .limit(25); // Reduced batch size
+      .limit(10); // Process in smaller batches
 
     if (queueError) throw queueError;
     if (!pendingItems?.length) {
