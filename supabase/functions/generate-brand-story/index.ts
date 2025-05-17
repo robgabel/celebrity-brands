@@ -9,20 +9,62 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are a business journalist writing for Fortune magazine. 
-Write a compelling narrative about the brand, focusing on:
-- Core business and products/services
-- Target customer demographics
-- Key competitors
-- Origin story and founding
-- Celebrity/creator involvement
-- Critical business decisions, setbacks, and successes
-- Marketing strategy, especially celebrity/influencer involvement
-- Unique value proposition
-- Business metrics if available
-- Future growth prospects
+Write a comprehensive, in-depth narrative about the brand. Your story must thoroughly cover:
 
-Write in a professional, journalistic style. Be specific and detailed. 
-Break the full story into clear, well-organized paragraphs.
+- Core business and products/services
+  * Detailed product lines and offerings
+  * Quality standards and manufacturing
+  * Pricing strategy and market positioning
+
+- Target customer demographics
+  * Primary and secondary audiences
+  * Customer behavior and preferences
+  * Market segmentation
+
+- Key competitors
+  * Direct and indirect competition
+  * Competitive advantages
+  * Market share analysis
+
+- Origin story and founding
+  * Detailed founding timeline
+  * Initial challenges and solutions
+  * Early business model evolution
+
+- Celebrity/creator involvement
+  * Role in product development
+  * Creative direction influence
+  * Brand ambassador activities
+
+- Critical business decisions, setbacks, and successes
+  * Major pivots and strategic changes
+  * Growth milestones
+  * Challenges overcome
+
+- Marketing strategy, especially celebrity/influencer involvement
+  * Campaign highlights
+  * Social media presence
+  * Influencer partnerships
+
+- Unique value proposition
+  * Brand differentiation
+  * Core values and mission
+  * Customer benefits
+
+- Business metrics if available
+  * Growth indicators
+  * Market performance
+  * Sales achievements
+
+- Future growth prospects
+  * Expansion plans
+  * Market opportunities
+  * Innovation pipeline
+
+Write in a professional, journalistic style that combines thorough research with engaging storytelling.
+Each paragraph should focus on a specific aspect while maintaining narrative flow.
+Use concrete examples, specific details, and industry context throughout.
+Aim for at least 6-8 well-developed paragraphs that tell a complete story.
 
 Format the response as a JSON object with these keys:
 {
@@ -32,7 +74,9 @@ Format the response as a JSON object with these keys:
   "key_events": ["Event 1", "Event 2", "Event 3"]
 }
 
-The full_story should be an array of paragraphs, each as a separate string.
+The full_story MUST be an array of paragraphs, with each paragraph as a separate string.
+Each paragraph should be substantial (100-200 words) and focus on a specific aspect of the brand story.
+Ensure smooth transitions between paragraphs to maintain narrative flow.
 `;
 
 serve(async (req: Request) => {
@@ -72,20 +116,25 @@ serve(async (req: Request) => {
 
     // Generate story
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4.1",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `Generate a detailed story about ${brand.name}, founded by ${brand.creators} in ${brand.year_founded}. 
-Product category: ${brand.product_category}
-Description: ${brand.description}
+          content: `Write a comprehensive brand story about ${brand.name}, founded by ${brand.creators} in ${brand.year_founded}.
 
-Make sure to break the story into clear, well-organized paragraphs.`
+Brand Details:
+- Product Category: ${brand.product_category}
+- Description: ${brand.description}
+- Type of Influencer: ${brand.type_of_influencer}
+- Brand Type: ${brand.brand_collab ? 'Collaboration Brand' : 'Own Brand'}
+
+Focus on creating a detailed narrative that explores the brand's journey, market impact, and future potential.
+Break the story into clear, substantial paragraphs that each focus on different aspects while maintaining a cohesive narrative flow.`
         }
       ],
-      temperature: 0.7,
-      max_tokens: 2000
+      temperature: 0.8,
+      max_tokens: 4000
     });
 
     const story = JSON.parse(completion.choices[0].message.content);
