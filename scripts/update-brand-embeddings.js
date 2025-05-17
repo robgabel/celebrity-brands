@@ -1,45 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { backOff } from 'exponential-backoff';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 
 // Constants for retry and rate limiting
 const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 2000;
-const MAX_RETRY_DELAY = 10000;
-const BATCH_SIZE = 5;
-const DELAY_BETWEEN_BATCHES = 5000;
+const INITIAL_RETRY_DELAY = 1000;
+const MAX_RETRY_DELAY = 5000;
+const BATCH_SIZE = 3;
+const DELAY_BETWEEN_BATCHES = 3000;
 
-console.log('Starting brand embeddings update script...');
+console.log('\nStarting brand embeddings update script...');
 
 // Load environment variables
-console.log('Loading environment variables...');
 dotenv.config();
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Checking environment variables...');
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('Missing required environment variables');
   process.exit(1);
 }
-console.log('Environment variables loaded successfully');
 
 // Initialize Supabase client
-console.log('Initializing Supabase client...');
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('Supabase client initialized');
 
 // Initialize axios instance with defaults
 const api = axios.create({
-  timeout: 60000, // Increased to 60 second timeout
+  timeout: 30000,
   baseURL: SUPABASE_URL,
   headers: {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json'
   },
-  validateStatus: null // Don't reject any status codes
+  validateStatus: (status) => status < 500 // Only retry on 5xx errors
 });
 
 async function sleep(ms) {
@@ -48,18 +43,19 @@ async function sleep(ms) {
 
 async function updateBrandEmbedding(brandId) {
   const operation = async () => {
-    console.log(`[${new Date().toISOString()}] Updating embedding for brand ID ${brandId}...`);
+    console.log(`Updating embedding for brand ID ${brandId}...`);
 
-    const { data, error } = await supabase
-      .rpc('update_brand_embedding', { brand_id: brandId });
+    try {
+      const { data, error } = await supabase
+        .rpc('update_brand_embedding', { brand_id: brandId });
 
-    if (error) {
-      console.error(`[${new Date().toISOString()}] RPC error:`, error);
-      throw error;
+      if (error) throw error;
+
+      return true;
+    } catch (err) {
+      console.error(`RPC error:`, err);
+      throw err;
     }
-
-    console.log(`✅ Successfully queued embedding update for brand ID ${brandId}`);
-    return true;
   };
 
   try {
@@ -69,7 +65,7 @@ async function updateBrandEmbedding(brandId) {
       maxDelay: MAX_RETRY_DELAY,
       jitter: 'full',
       retry: (e, attemptNumber) => {
-        console.log(`Attempt ${attemptNumber} failed:`, e.message);
+        console.log(`Attempt ${attemptNumber} failed: ${e.message}`);
         return attemptNumber < MAX_RETRIES;
       }
     });
@@ -81,9 +77,8 @@ async function updateBrandEmbedding(brandId) {
 }
 
 async function processEmbeddingQueue() {
-  const operation = async () => {
-    console.log('Processing embedding queue...');
-    
+  const operation = async () => {    
+    // Call the Edge Function to process the queue
     const response = await api.post('/functions/v1/update-embeddings');
 
     if (!response.data?.success) {
@@ -101,7 +96,7 @@ async function processEmbeddingQueue() {
       maxDelay: MAX_RETRY_DELAY,
       jitter: 'full',
       retry: (e, attemptNumber) => {
-        console.log(`Queue processing attempt ${attemptNumber} failed:`, e.message);
+        console.log(`Queue processing attempt ${attemptNumber} failed: ${e.message}`);
         return attemptNumber < MAX_RETRIES;
       }
     });
@@ -115,7 +110,6 @@ async function processBrandsInBatches(brands) {
   const results = {
     successCount: 0,
     failureCount: 0,
-    failedBrands: [] // Track failed brands
   };
 
   for (let i = 0; i < brands.length; i += BATCH_SIZE) {
@@ -128,26 +122,21 @@ async function processBrandsInBatches(brands) {
         results.successCount++;
       } else {
         results.failureCount++;
-        results.failedBrands.push(brand.id);
       }
-      // Small delay between brands
-      await sleep(5000);
+      await sleep(2000); // Reduced delay between brands
     }
 
     if (i + BATCH_SIZE < brands.length) {
-      console.log(`[${new Date().toISOString()}] Waiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`);
+      console.log(`\nWaiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`);
       await sleep(DELAY_BETWEEN_BATCHES);
     }
-  }
 
   return results;
 }
 
 async function main() {
   try {
-    console.log('Script loaded, running main function...');
-    console.log('Starting main process...');
-    console.log('Fetching brands with NULL embeddings...\n');
+    console.log('Fetching brands with NULL embeddings...');
     
     const { data: brands, error } = await supabase
       .from('brands')
@@ -164,7 +153,7 @@ async function main() {
       return;
     }
 
-    console.log(`\nTotal brands to update: ${brands.length}`);
+    console.log(`Total brands to update: ${brands.length}`);
     console.log('Starting updates in batches...\n');
     
     const results = await processBrandsInBatches(brands);
@@ -172,7 +161,7 @@ async function main() {
     // Add delay before processing queue
     await sleep(10000);
 
-    // Process the embedding queue
+    // Process the queue
     console.log('\nProcessing embedding queue...');
     await processEmbeddingQueue();
 
@@ -183,9 +172,6 @@ async function main() {
     console.log(`Total brands processed: ${brands.length}`);
     console.log(`✅ Successfully queued: ${results.successCount} brands`);
     console.log(`❌ Failed to queue: ${results.failureCount}`);
-    if (results.failedBrands.length > 0) {
-      console.log(`Failed brand IDs: ${results.failedBrands.join(', ')}`);
-    }
 
     // Exit successfully
     process.exit(0);
