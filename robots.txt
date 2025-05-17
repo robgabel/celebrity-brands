@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://celebritybrands.com/sitemap.xml
+
+# Rate limiting
+Crawl-delay: 1
+
+# Important sections
+Allow: /brands/
+Allow: /explore
+Allow: /compare
+
+# Prevent duplicate content
+Disallow: /api/
+Disallow: /*?*sort=
+Disallow: /*?*filter=

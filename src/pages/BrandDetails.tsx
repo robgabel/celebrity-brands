@@ -319,6 +319,27 @@ export function BrandDetails() {
   return (
     <div className="min-h-screen bg-gray-900">
       <GlobalNav />
+      <Helmet>
+        <title>{brand.name} Brand Analysis | Celebrity Brands Database</title>
+        <meta name="description" content={`${brand.name} brand analysis - Founded by ${brand.creators} in ${brand.year_founded}. Get detailed insights, metrics, and brand story.`} />
+        <meta name="keywords" content={`${brand.name}, ${brand.creators}, ${brand.product_category}, creator brands, brand analysis`} />
+        
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": brand.name,
+            "description": brand.description,
+            "brand": {
+              "@type": "Brand",
+              "name": brand.name,
+              "foundingDate": brand.year_founded,
+              "founder": brand.creators
+            },
+            "category": brand.product_category
+          })}
+        </script>
+      </Helmet>
       <div className="max-w-4xl mx-auto px-4 py-8">
         <nav className="mb-6">
         

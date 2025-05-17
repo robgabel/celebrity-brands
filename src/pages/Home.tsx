@@ -203,6 +203,11 @@ export function HomePage() {
   
   return (
     <div className="min-h-screen bg-gray-900">
+      <Helmet>
+        <title>Celebrity Brands Database | Track Creator & Influencer Brands</title>
+        <meta name="description" content="Discover and track celebrity, creator, and influencer-owned brands. Get detailed analytics, brand stories, and market insights for the creator economy." />
+        <link rel="canonical" href="https://celebritybrands.com" />
+      </Helmet>
       <GlobalNav />
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero Section */}
