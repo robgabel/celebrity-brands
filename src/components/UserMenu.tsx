@@ -47,7 +47,7 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="fixed right-4 mt-2 w-48 bg-gray-900 rounded-lg shadow-xl py-1 z-50 border border-gray-800">
+        <div className="fixed right-4 mt-2 w-48 bg-gray-900 rounded-lg shadow-xl py-1 z-[100] border border-gray-800">
           <Link
             to="/profile"
             className="flex items-center px-4 py-2 text-gray-200 hover:bg-gray-800"
