@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.39.7";
 import OpenAI from "npm:openai@4.28.0";
-import { backOff } from "npm:exponential-backoff@3.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,19 +8,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
 
-// Backoff configuration
-const backoffConfig = {
-  numOfAttempts: 5,
-  startingDelay: 1000,
-  maxDelay: 10000,
-  timeMultiple: 2,
-  jitter: 'full'
-};
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_DELAY = 1000;
+
+async function retryWithExponentialBackoff<T>(
+  operation: () => Promise<T>,
+  retries = MAX_RETRIES,
+  delay = INITIAL_DELAY
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (retries === 0) throw error;
+    
+    // Add jitter to delay
+    const jitteredDelay = delay + Math.random() * 1000;
+    await new Promise(resolve => setTimeout(resolve, jitteredDelay));
+    
+    console.log(`Retrying operation, ${retries} attempts remaining...`);
+    return retryWithExponentialBackoff(operation, retries - 1, delay * 2);
+  }
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
+
+  const processedIds = new Set<string>();
 
   try {
     // Initialize clients
@@ -41,7 +56,7 @@ serve(async (req: Request) => {
       .from('embedding_queue')
       .select('id, record_id, text_for_embedding')
       .eq('status', 'pending')
-      .limit(10); // Process in smaller batches
+      .limit(5); // Process in even smaller batches
 
     if (queueError) throw queueError;
     if (!pendingItems?.length) {
@@ -61,9 +76,12 @@ serve(async (req: Request) => {
     };
 
     for (const item of pendingItems) {
+      // Skip if already processed
+      if (processedIds.has(item.id)) continue;
+      
       try {
         // Generate embedding with retry
-        const embedding = await backOff(async () => {
+        const embedding = await retryWithExponentialBackoff(async () => {
           const response = await openai.embeddings.create({
             model: "text-embedding-ada-002",
             input: item.text_for_embedding.trim().slice(0, 8000) // Limit text length
@@ -74,20 +92,22 @@ serve(async (req: Request) => {
           }
 
           return response;
-        }, backoffConfig);
+        });
+
+        processedIds.add(item.id);
 
         // Update brand with new embedding
-        await backOff(async () => {
+        await retryWithExponentialBackoff(async () => {
           const { error: updateError } = await supabase
             .from('brands')
             .update({ embedding: embedding.data[0].embedding })
             .eq('id', item.record_id);
 
           if (updateError) throw updateError;
-        }, backoffConfig);
+        });
 
         // Mark queue item as processed
-        await backOff(async () => {
+        await retryWithExponentialBackoff(async () => {
           const { error: queueError } = await supabase
             .from('embedding_queue')
             .update({
@@ -97,7 +117,7 @@ serve(async (req: Request) => {
             .eq('id', item.id);
 
           if (queueError) throw queueError;
-        }, backoffConfig);
+        });
 
         results.success++;
         console.log(`✅ Successfully updated embedding for brand ${item.record_id}`);
