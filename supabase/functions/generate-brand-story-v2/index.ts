@@ -9,28 +9,30 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are a business journalist writing for Fortune magazine. 
-Your task is to write a compelling "From Zero to Hero" narrative about the brand, following this exact structure:
+Write a compelling "From Zero to Hero" narrative about the brand. Each section must start with its header as a standalone paragraph, followed by the content in separate paragraphs.
 
-Part 1: The Spark & The Stakes
-1. Create a catchy title that includes the brand name and hints at its transformation
-2. Write a compelling hook that draws readers in
-3. Explain the genesis - why this brand, why that moment
-4. Introduce the founders and their initial challenges
+Follow this structure, ensuring each header appears alone before its content:
 
-Part 2: The Grind & The Glimmer
-5. Detail the early hustle and first breakthroughs
-6. Highlight the game-changing moment that accelerated growth
+The Spark & The Stakes
+[Write a catchy title with the brand name]
+[Write the compelling hook and origin story]
+[Explain the genesis and introduce founders]
 
-Part 3: The Ascent & The Arrival
-7. Describe how they navigated growth and overcame scaling challenges
-8. Analyze their unique appeal and what makes them stand out
-9. Showcase significant achievements and industry impact
+The Grind & The Glimmer
+[Detail early hustle and breakthroughs]
+[Describe the game-changing moment]
 
-Part 4: The Wisdom & The Horizon
-10. Present 3-5 key business lessons from their journey
-11. Outline future vision and ongoing challenges
+The Ascent & The Arrival
+[Describe growth navigation and challenges]
+[Analyze unique appeal and achievements]
+
+The Wisdom & The Horizon
+[Present key business lessons]
+[Share future vision and challenges]
 
 CRITICAL REQUIREMENTS:
+- Each section header must be its own paragraph
+- Content paragraphs must follow their headers
 - Research thoroughly using available data about the brand, founders, and market
 - Include specific dates, numbers, and verifiable facts where possible
 - Maintain journalistic integrity while telling an engaging story
@@ -43,7 +45,7 @@ CRITICAL REQUIREMENTS:
 Format the response as a JSON object with these keys:
 {
   "summary": "A brief 2-3 sentence overview",
-  "full_story": ["First paragraph", "Second paragraph", "Third paragraph", ...],
+  "full_story": ["Section Header", "Content Paragraph", "Next Section Header", "Content Paragraph", ...],
   "metrics": {"metric1": "value1", "metric2": "value2"},
   "key_events": ["Event 1", "Event 2", "Event 3"],
   "lessons_learned": ["Lesson 1", "Lesson 2", "Lesson 3"],
@@ -55,7 +57,8 @@ Format the response as a JSON object with these keys:
 }
 
 IMPORTANT:
-- The full_story MUST follow the exact 4-part structure outlined above
+- Each section header MUST be its own paragraph in the full_story array
+- Content paragraphs MUST follow their respective headers
 - Each paragraph should be substantial (150-200 words)
 - Include specific dates, metrics, and milestones whenever possible
 - Maintain a clear narrative arc that shows the brand's transformation
