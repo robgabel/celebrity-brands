@@ -10,6 +10,7 @@ import { getDomainRanking, RankingResponse } from '../services/domainRankingServ
 import { TrendChart } from '../components/TrendChart';
 import { DomainRanking } from '../components/DomainRanking';
 import { GlobalNav } from '../components/GlobalNav';
+import { NewsFeedback } from '../components/NewsFeedback';
 import { Button } from '../components/Button';
 import { StoryVersionDialog } from '../components/StoryVersionDialog';
 
@@ -517,6 +518,11 @@ export function BrandDetails() {
                           <span>{article.source}</span>
                           <span>•</span>
                           <span>{new Date(article.published_at).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <NewsFeedback
+                            brandId={brand.id}
+                            articleUrl={article.url}
+                          />
                         </div>
                       </a>
                     </div>
