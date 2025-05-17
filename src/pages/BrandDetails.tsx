@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { ChevronLeft, Globe, Calendar, Building2, Package, AlertCircle, Newspaper, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { FavoriteButton } from '../components/FavoriteButton';
