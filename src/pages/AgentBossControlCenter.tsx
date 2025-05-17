@@ -64,25 +64,38 @@ export function AgentBossControlCenter() {
     ));
 
     try {
-      // Call analyze-brands function
-      const { data, error } = await supabase.functions.invoke('analyze-brands', {
-        body: { 
-          name: candidate.name,
-          creators: candidate.creators
-        }
-      });
-
-      if (error) throw error;
-
-      // Insert new brand with analyzed data
-      const { error: insertError } = await supabase
+      // First insert the brand with basic info
+      const { data: newBrand, error: insertError } = await supabase
         .from('brands')
         .insert([{
-          ...data,
+          name: candidate.name,
+          creators: candidate.creators,
+          description: candidate.description,
           approval_status: 'pending'
-        }]);
+        }])
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+      if (!newBrand) throw new Error('Failed to create brand');
+
+      // Now call analyze-brands function with the new brand ID
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ brandId: newBrand.id })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
+      }
 
       // Update candidate status to success
       setCandidates(prev => prev.map((c, i) => 
