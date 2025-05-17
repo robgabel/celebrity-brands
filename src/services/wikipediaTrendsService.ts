@@ -28,15 +28,30 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
 
     console.log('Fetching fresh page views for:', brandName);
 
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wikipedia-pageviews`;
+    // Add timestamp to prevent caching issues
+    const timestamp = Date.now();
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wikipedia-pageviews?_=${timestamp}`;
     const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}`, {
       headers: {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
       }
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          interest: [],
+          averageInterest: 0,
+          maxInterest: 0,
+          minInterest: 0,
+          articleTitle: brandName,
+          source: 'Wikipedia Page Views',
+          dataAvailable: false
+        };
+      }
+
       const error = await response.json();
       if (response.status === 404) {
         return {
@@ -67,6 +82,11 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
       error: error.message,
       brandName
     });
+
+    // Handle network errors more gracefully
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to Wikipedia service. Please try again later.');
+    }
 
     if (error.message?.includes('not found')) {
       throw new Error(`No Wikipedia data available for "${brandName}"`);

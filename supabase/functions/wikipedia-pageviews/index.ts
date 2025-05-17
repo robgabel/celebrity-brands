@@ -10,7 +10,8 @@ const REQUEST_TIMEOUT = 10000; // 10 second timeout
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Accept',
+  'Access-Control-Max-Age': '86400'
 };
 
 // Add jitter to retry delay
@@ -25,13 +26,21 @@ function getRetryDelay(attempt: number): number {
 async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
   let lastError: Error | null = null;
 
+  const finalOptions = {
+    ...options,
+    headers: {
+      ...options.headers,
+      'User-Agent': USER_AGENT
+    }
+  };
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT);
 
     try {
-      const response = await fetch(url, {
-        ...options,
+      const response = await fetch(url, { 
+        ...finalOptions,
         signal: timeoutController.signal
       });
 
@@ -126,6 +135,14 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const query = url.searchParams.get('query');
 
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders
+      });
+    }
+
     if (!query) {
       throw new Error('Query parameter is required');
       return new Response(JSON.stringify({
@@ -216,7 +233,8 @@ serve(async (req: Request) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': `public, max-age=${CACHE_TTL / 1000}`
+        'Cache-Control': `public, max-age=${CACHE_TTL / 1000}`,
+        'Vary': 'Origin'
       }
     });
   } catch (error) {
