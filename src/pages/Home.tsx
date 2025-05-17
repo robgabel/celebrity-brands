@@ -1,22 +1,85 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Calendar } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Calendar, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { BrandCard } from '../components/BrandCard';
 import { getCategoryIcon } from '../lib/categoryUtils';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
+import { useDebounce } from '../hooks/useDebounce';
 import type { Brand } from '../types/brand';
 
+interface SearchSuggestion {
+  type: 'brand' | 'category';
+  text: string;
+  subtext?: string;
+}
+
 export function HomePage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [recentBrands, setRecentBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 300);
   
+  useEffect(() => {
+    if (debouncedSearch.trim()) {
+      fetchSuggestions();
+    } else {
+      setSuggestions([]);
+    }
+  }, [debouncedSearch]);
+
+  const fetchSuggestions = async () => {
+    setIsLoadingSuggestions(true);
+    try {
+      // Search brands
+      const { data: brands } = await supabase
+        .from('brands')
+        .select('name, creators')
+        .eq('approval_status', 'approved')
+        .or(`name.ilike.%${debouncedSearch}%,creators.ilike.%${debouncedSearch}%`)
+        .limit(5);
+
+      // Search categories
+      const { data: categories } = await supabase
+        .from('brands')
+        .select('product_category')
+        .eq('approval_status', 'approved')
+        .ilike('product_category', `%${debouncedSearch}%`)
+        .limit(3);
+
+      const uniqueCategories = Array.from(
+        new Set(categories?.map(item => item.product_category) || [])
+      );
+
+      const suggestions: SearchSuggestion[] = [
+        ...(brands?.map(brand => ({
+          type: 'brand' as const,
+          text: brand.name,
+          subtext: brand.creators
+        })) || []),
+        ...uniqueCategories.map(category => ({
+          type: 'category' as const,
+          text: category
+        }))
+      ];
+
+      setSuggestions(suggestions);
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
   useEffect(() => {
     checkAuth();
     const fetchHomeData = async () => {
@@ -83,8 +146,15 @@ export function HomePage() {
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/explore?search=${encodeURIComponent(searchQuery)}`;
+    navigateToSearch(searchQuery);
+  };
+
+  const navigateToSearch = (query: string, type?: 'category') => {
+    if (query.trim()) {
+      const searchParams = type === 'category' 
+        ? `category=${encodeURIComponent(query)}`
+        : `search=${encodeURIComponent(query)}`;
+      navigate(`/explore?${searchParams}`);
     }
   };
   
@@ -130,27 +200,81 @@ export function HomePage() {
             Celebrity-Owned Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
-            Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities, creators and influencers.
+            Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities and influencers.
           </p>
           
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
-            <input
-              type="text"
-              placeholder="Search brands..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-32 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-            <Search 
-              className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" 
-              size={24} 
-            />
-            <button 
-              type="submit" 
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full transition-colors"
-            >
-              Search
-            </button>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search brands, creators, or categories..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                className="w-full h-14 rounded-full bg-gray-900 border border-gray-700 px-6 pl-14 pr-32 text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              />
+              <Search 
+                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" 
+                size={24} 
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSuggestions([]);
+                  }}
+                  className="absolute right-32 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+              <button 
+                type="submit" 
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-full transition-colors"
+              >
+                Search
+              </button>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-16 left-0 w-full bg-gray-800 rounded-lg border border-gray-700 shadow-xl overflow-hidden z-50">
+                  {isLoadingSuggestions ? (
+                    <div className="p-4 text-center text-gray-400">
+                      Loading suggestions...
+                    </div>
+                  ) : (
+                    <ul>
+                      {suggestions.map((suggestion, index) => (
+                        <li key={`${suggestion.type}-${index}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery(suggestion.text);
+                              setShowSuggestions(false);
+                              navigateToSearch(suggestion.text, suggestion.type === 'category' ? 'category' : undefined);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-700/50 flex items-start gap-3"
+                          >
+                            <Search className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <div className="text-gray-200">{suggestion.text}</div>
+                              {suggestion.subtext && (
+                                <div className="text-sm text-gray-400">
+                                  {suggestion.subtext}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           </form>
           
           <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-6">
@@ -269,3 +393,15 @@ export function HomePage() {
     </div>
   );
 }
+
+// Close suggestions when clicking outside
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('form')) {
+      setShowSuggestions(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
