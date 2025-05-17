@@ -11,6 +11,7 @@ import { TrendChart } from '../components/TrendChart';
 import { DomainRanking } from '../components/DomainRanking';
 import { GlobalNav } from '../components/GlobalNav';
 import { Button } from '../components/Button';
+import { StoryVersionDialog } from '../components/StoryVersionDialog';
 
 interface NewsArticle {
   title: string;
@@ -64,16 +65,23 @@ export function BrandDetails() {
   const [rankingError, setRankingError] = useState<string | null>(null);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [storyError, setStoryError] = useState<string | null>(null);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
 
   const generateBrandStory = async () => {
+    setShowVersionDialog(true);
+  };
+
+  const handleGenerateStory = async (version: 'v1' | 'v2') => {
+    setShowVersionDialog(false);
     if (!brand) return;
     
     setIsGeneratingStory(true);
     setStoryError(null);
     
     try {
+      const endpoint = version === 'v1' ? 'generate-brand-story' : 'generate-brand-story-v2';
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`,
         {
           method: 'POST',
           headers: {
@@ -312,6 +320,13 @@ export function BrandDetails() {
       <GlobalNav />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <nav className="mb-6">
+        
+        <StoryVersionDialog
+          isOpen={showVersionDialog}
+          onClose={() => setShowVersionDialog(false)}
+          onSelect={handleGenerateStory}
+        />
+        
           <ol className="flex items-center space-x-2 text-sm text-gray-400">
             <li>
               <Link to="/" className="hover:text-gray-300">Brands</Link>
