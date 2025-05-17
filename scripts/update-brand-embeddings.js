@@ -200,6 +200,7 @@ async function main() {
     console.error('Full error:', error);
     process.exit(1);
   }
+}
 
 // Run the script
 main().catch(error => {
