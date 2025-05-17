@@ -212,7 +212,7 @@ export function HomePage() {
       <GlobalNav />
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero Section */}
-        <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
+        <section className="relative py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
             Discover and Follow<br />
             Celebrity-Owned Brands

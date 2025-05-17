@@ -39,7 +39,7 @@ export function GlobalNav({
   }, []);
 
   return (
-    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50">
+    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50 relative z-[200]">
       {isAdmin && <AdminRibbon />}
       <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center space-x-8">
