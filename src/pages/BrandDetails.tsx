@@ -462,7 +462,7 @@ export function BrandDetails() {
                               paragraph.endsWith(':') || 
                               (paragraph.split(' ').length <= 6 && 
                               paragraph === paragraph.trim() && 
-                              !paragraph.endsWith('.'))
+                              (!paragraph.endsWith('.') || paragraph.includes(': ')))
                             ))
                               ? 'font-bold text-xl text-gray-100 mt-8 mb-4' 
                               : ''
