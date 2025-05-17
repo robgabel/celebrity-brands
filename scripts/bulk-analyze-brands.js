@@ -57,12 +57,12 @@ async function main() {
     const { data: brands, error } = await supabase
       .from('brands')
       .select('id, name')
-      .is('description', null);
+      .or('description.is.null,description.eq.');
 
     if (error) throw error;
 
     if (!brands || brands.length === 0) {
-      console.log('No brands found with NULL descriptions.');
+      console.log('No brands found with NULL or empty descriptions.');
       return;
     }
 
