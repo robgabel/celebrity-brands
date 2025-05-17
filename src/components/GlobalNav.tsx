@@ -54,12 +54,6 @@ export function GlobalNav({
               to="/explore" 
               className="text-gray-300 hover:text-gray-100 transition-colors mr-6"
             >
-              Explore
-            </Link>
-            <Link
-              to="/compare"
-              className="text-gray-300 hover:text-gray-100 transition-colors"
-            >
               Compare
             </Link>
           </nav>

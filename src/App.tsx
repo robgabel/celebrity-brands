@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/Home';
 import { ExplorePage } from './pages/Explore';
-import { ComparePage } from './pages/Compare';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { Profile } from './pages/Profile';
@@ -16,7 +15,6 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/compare" element={<ComparePage />} />
         <Route path="/brands/:brandSlug" element={<BrandDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
