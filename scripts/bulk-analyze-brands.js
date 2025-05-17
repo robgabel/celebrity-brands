@@ -24,40 +24,47 @@ async function sleep(ms) {
 
 async function analyzeBrand(brandId) {
   try {
+    console.log(`Analyzing brand ID ${brandId}...`);
+    
     const response = await fetch(
       `${SUPABASE_URL}/functions/v1/analyze-brands`,
       {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ brandId })
       }
     );
 
+    const data = await response.json();
+    
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-    console.log(`✅ Successfully analyzed brand ID ${brandId}`);
-    return result;
+    if (!data.success) {
+      throw new Error('Analysis failed: ' + (data.error || 'Unknown error'));
+    }
+
+    console.log(`✅ Successfully analyzed brand ID ${brandId}:`, data.data?.product_category || 'No category set');
+    return data;
   } catch (error) {
-    console.error(`❌ Failed to analyze brand ID ${brandId}:`, error.message);
+    console.error(`❌ Failed to analyze brand ID ${brandId}:`, error.message || error);
     return null;
   }
 }
 
 async function main() {
   try {
-    console.log('Fetching brands with NULL product categories...');
+    console.log('Fetching brands with NULL or empty product categories...\n');
     
     // First query for NULL product categories
     const { data: nullBrands, error: nullError } = await supabase
       .from('brands')
-      .select('id, name')
+      .select('id, name, product_category')
       .is('product_category', null);
 
     if (nullError) throw nullError;
@@ -65,7 +72,7 @@ async function main() {
     // Then query for empty string product categories
     const { data: emptyBrands, error: emptyError } = await supabase
       .from('brands')
-      .select('id, name')
+      .select('id, name, product_category')
       .eq('product_category', '');
 
     if (emptyError) throw emptyError;
@@ -73,21 +80,23 @@ async function main() {
     // Combine results
     const brands = [...(nullBrands || []), ...(emptyBrands || [])];
 
-    console.log('NULL product categories:', nullBrands?.length || 0);
-    console.log('Empty product categories:', emptyBrands?.length || 0);
+    console.log(`Found ${nullBrands?.length || 0} brands with NULL product_category`);
+    console.log(`Found ${emptyBrands?.length || 0} brands with empty product_category`);
 
     if (!brands.length) {
       console.log('No brands found with NULL or empty product categories.');
       return;
     }
 
-    console.log(`\nFound ${brands.length} total brands to analyze.`);
+    console.log(`\nTotal brands to analyze: ${brands.length}`);
+    console.log('Starting analysis...\n');
     
     let successCount = 0;
     let failureCount = 0;
 
     for (const [index, brand] of brands.entries()) {
-      console.log(`\nProcessing ${index + 1}/${brands.length}: ${brand.name} (ID: ${brand.id})`);
+      console.log(`Processing ${index + 1}/${brands.length}: ${brand.name} (ID: ${brand.id})`);
+      console.log(`Current category: ${brand.product_category === null ? 'NULL' : brand.product_category === '' ? 'EMPTY' : brand.product_category}`);
       
       const result = await analyzeBrand(brand.id);
       
@@ -103,8 +112,9 @@ async function main() {
       }
     }
 
-    console.log('\nAnalysis complete!');
-    console.log(`✅ Successfully analyzed: ${successCount}`);
+    console.log('\n=== Analysis Complete ===');
+    console.log(`Total brands processed: ${brands.length}`);
+    console.log(`✅ Successfully analyzed: ${successCount} brands`);
     console.log(`❌ Failed to analyze: ${failureCount}`);
   } catch (error) {
     console.error('Script failed:', error);
