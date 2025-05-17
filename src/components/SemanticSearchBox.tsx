@@ -25,8 +25,11 @@ export function SemanticSearchBox() {
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
+      if (!searchQuery.trim()) return;
+      
       // Navigate to explore page with search query
-      navigate(`/explore?semantic=${encodeURIComponent(debouncedSearchQuery)}`);
+      navigate(`/explore?semantic=${encodeURIComponent(searchQuery)}`);
+      setShowResults(false);
       return;
     }
 

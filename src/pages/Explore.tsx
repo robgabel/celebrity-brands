@@ -17,6 +17,7 @@ export function ExplorePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const semanticQuery = searchParams.get('semantic');
+  const [semanticResults, setSemanticResults] = useState<Brand[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,39 @@ export function ExplorePage() {
   }, [isAuthenticated]);
 
   const checkAuth = async () => {
+    if (semanticQuery) {
+      // Handle semantic search
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: semanticQuery })
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Failed to search: ${response.status}`);
+        }
+
+        const matches = await response.json();
+        setBrands(matches);
+        setTotalItems(matches.length);
+        setLoading(false);
+        return;
+      } catch (err: any) {
+        console.error('Semantic search error:', err);
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setIsAuthenticated(!!user);
