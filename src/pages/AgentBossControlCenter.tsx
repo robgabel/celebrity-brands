@@ -64,10 +64,22 @@ export function AgentBossControlCenter() {
     ));
 
     try {
-      // First insert the brand with basic info
+      // First get the maximum existing ID
+      const { data: maxIdData, error: maxIdError } = await supabase
+        .from('brands')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+
+      if (maxIdError) throw maxIdError;
+
+      const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
+
+      // Now insert the brand with the next available ID
       const { data: newBrand, error: insertError } = await supabase
         .from('brands')
         .insert([{
+          id: nextId,
           name: candidate.name,
           creators: candidate.creators,
           description: candidate.description,
