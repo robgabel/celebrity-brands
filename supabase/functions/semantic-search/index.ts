@@ -47,7 +47,7 @@ serve(async (req: Request) => {
     const { data: matches, error: searchError } = await supabase
       .rpc('match_brands_semantic', {
         query_embedding: embedding.data[0].embedding,
-        match_threshold: 0.5,
+        match_threshold: 0.25,
         match_count: 10
       });
 
