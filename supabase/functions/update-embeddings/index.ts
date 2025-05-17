@@ -11,9 +11,9 @@ const corsHeaders = {
 
 // Backoff configuration
 const backoffConfig = {
-  numOfAttempts: 3,
+  numOfAttempts: 5,
   startingDelay: 1000,
-  maxDelay: 5000,
+  maxDelay: 10000,
   timeMultiple: 2,
   jitter: 'full'
 };
@@ -41,7 +41,7 @@ serve(async (req: Request) => {
       .from('embedding_queue')
       .select('id, record_id, text_for_embedding')
       .eq('status', 'pending')
-      .limit(50);
+      .limit(25); // Reduced batch size
 
     if (queueError) throw queueError;
     if (!pendingItems?.length) {
@@ -66,7 +66,7 @@ serve(async (req: Request) => {
         const embedding = await backOff(async () => {
           const response = await openai.embeddings.create({
             model: "text-embedding-ada-002",
-            input: item.text_for_embedding.trim()
+            input: item.text_for_embedding.trim().slice(0, 8000) // Limit text length
           });
 
           if (!response.data[0]?.embedding) {
@@ -105,7 +105,7 @@ serve(async (req: Request) => {
         results.failed++;
         const errorMsg = `Brand ${item.record_id}: ${err.message || 'Unknown error'}`;
         results.errors.push(errorMsg);
-        console.error(`Error processing brand ${item.record_id}:`, err);
+        console.error(`❌ ${errorMsg}`);
 
         // Mark queue item as failed
         try {
@@ -120,6 +120,9 @@ serve(async (req: Request) => {
         } catch (updateErr) {
           console.error('Failed to update queue status:', updateErr);
         }
+
+        // Add delay after error to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
