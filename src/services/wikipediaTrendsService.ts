@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 export interface TrendData {
   timestamp: string;
   value: number;
@@ -10,6 +12,7 @@ export interface TrendResponse {
   minInterest: number;
   articleTitle: string;
   source: string;
+  dataAvailable?: boolean;
 }
 
 // Cache configuration
@@ -28,14 +31,17 @@ export async function getWikipediaPageViews(brandName: string): Promise<TrendRes
 
     console.log('Fetching fresh page views for:', brandName);
 
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wikipedia-pageviews`;
-    const response = await fetch(`${apiUrl}?query=${encodeURIComponent(brandName)}`, {
-      headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
+    // Call Supabase Edge Function
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wikipedia-pageviews?query=${encodeURIComponent(brandName)}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       }
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
