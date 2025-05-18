@@ -206,9 +206,9 @@ async function main() {
     console.log('Fetching brands with NULL embeddings...');
     
     const { data: brands, error } = await supabase
-      .from('brands')
+      .from('brands') 
       .select('id, name')
-      .is('embedding', null);
+      .eq('id', 8);
 
     if (error) {
       console.error('Error fetching brands:', error);
