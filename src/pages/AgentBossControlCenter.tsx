@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock } from 'lucide-react';
+import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock, CheckSquare, Square } from 'lucide-react';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
@@ -30,6 +30,8 @@ export function AgentBossControlCenter() {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [timeouts, setTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
   const [analysisStatus, setAnalysisStatus] = useState<{ [key: number]: string }>({});
+  const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
+  const [isProcessingBulk, setIsProcessingBulk] = useState(false);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -113,6 +115,7 @@ export function AgentBossControlCenter() {
     setPetraStatus('executing');
     setPetraError(null);
     setCandidates([]);
+    setSelectedCandidates([]);
 
     try {
       const response = await fetch(apiUrl, {
@@ -364,6 +367,47 @@ export function AgentBossControlCenter() {
     }
   };
 
+  const handleToggleSelect = (index: number) => {
+    setSelectedCandidates(prev => 
+      prev.includes(index)
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const availableCandidates = candidates
+      .map((_, index) => index)
+      .filter(index => !candidates[index].isAdded && !candidates[index].isProcessing);
+    
+    setSelectedCandidates(prev => 
+      prev.length === availableCandidates.length ? [] : availableCandidates
+    );
+  };
+
+  const handleBulkAdd = async () => {
+    if (selectedCandidates.length === 0) return;
+    
+    setIsProcessingBulk(true);
+    
+    try {
+      // Process selected candidates sequentially to maintain order
+      for (const index of selectedCandidates) {
+        const candidate = candidates[index];
+        if (!candidate.isAdded && !candidate.isProcessing) {
+          await handleAddBrand(candidate, index);
+        }
+      }
+      
+      // Clear selection after processing
+      setSelectedCandidates([]);
+    } catch (err) {
+      console.error('Error in bulk processing:', err);
+    } finally {
+      setIsProcessingBulk(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       <Helmet>
@@ -443,9 +487,38 @@ export function AgentBossControlCenter() {
 
               {candidates.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-lg font-medium text-gray-200 mb-4">
-                    Research Results
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-200">
+                      Research Results
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSelectAll}
+                        className="flex items-center gap-2 text-gray-400 hover:text-gray-300"
+                      >
+                        {selectedCandidates.length === candidates.filter(c => !c.isAdded && !c.isProcessing).length ? (
+                          <CheckSquare className="w-5 h-5" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                        Select All
+                      </button>
+                      {selectedCandidates.length > 0 && (
+                        <Button
+                          onClick={handleBulkAdd}
+                          disabled={isProcessingBulk}
+                          className="flex items-center gap-2"
+                        >
+                          {isProcessingBulk ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          Add Selected ({selectedCandidates.length})
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     {candidates.map((candidate, index) => (
                       <div 
@@ -454,7 +527,19 @@ export function AgentBossControlCenter() {
                           candidate.isAdded ? 'opacity-75' : ''
                         }`}
                       >
-                        <div className="flex justify-between items-start gap-4">
+                        <div className="flex items-start gap-4">
+                          {!candidate.isAdded && !candidate.isProcessing && (
+                            <button
+                              onClick={() => handleToggleSelect(index)}
+                              className="flex-shrink-0 mt-1"
+                            >
+                              {selectedCandidates.includes(index) ? (
+                                <CheckSquare className="w-5 h-5 text-teal-400" />
+                              ) : (
+                                <Square className="w-5 h-5 text-gray-400" />
+                              )}
+                            </button>
+                          )}
                           <div>
                             <h4 className="text-lg font-medium text-gray-200">
                               {candidate.name}
@@ -475,7 +560,9 @@ export function AgentBossControlCenter() {
                                 {candidate.embeddingError}
                               </p>
                             )}
-                          </div>
+                          </div>                          
+                        </div>
+                        <div className="flex justify-end mt-4">
                           <div className="flex items-center gap-2">
                             {!candidate.isAdded ? (
                               <>
