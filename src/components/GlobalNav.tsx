@@ -7,7 +7,6 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { AdminRibbon } from './AdminRibbon';
 import { useDebounce } from '../hooks/useDebounce';
-import { useEffect, useState } from 'react';
 
 interface SearchResult {
   id: number;
