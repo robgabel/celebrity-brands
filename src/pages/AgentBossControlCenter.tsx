@@ -63,7 +63,7 @@ export function AgentBossControlCenter() {
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isProcessing: true } : c
+      i === index ? { ...c, isProcessing: true, error: null } : c
     ));
 
     try {
@@ -104,8 +104,13 @@ export function AgentBossControlCenter() {
       if (!newBrand) throw new Error('Failed to create brand');
 
       // Update candidate with brand ID
-      setCandidates(prev => prev.map((c, i) => 
-        i === index ? { ...c, id: newBrand.id } : c
+      setCandidates(prev => prev.map((c, i) =>
+        i === index ? {
+          ...c,
+          id: newBrand.id,
+          isProcessing: false,
+          isAdded: true
+        } : c
       ));
 
       // Now call analyze-brands function with the new brand ID
@@ -126,10 +131,8 @@ export function AgentBossControlCenter() {
         throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
       }
 
-      // Update candidate status to success
-      setCandidates(prev => prev.map((c, i) => 
-        i === index ? { ...c, isProcessing: false, isAdded: true } : c
-      ));
+      // After successful analysis, queue the embedding update
+      await handleUpdateEmbeddings(newBrand.id, index);
     } catch (err: any) {
       console.error('Error adding brand:', err);
       
@@ -294,15 +297,8 @@ export function AgentBossControlCenter() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            {!candidate.isAdded && (
+                            {!candidate.isAdded ? (
                               <>
-                                <Button
-                                  onClick={() => candidate.id && handleUpdateEmbeddings(candidate.id, index)}
-                                  disabled={!candidate.id || candidate.isUpdatingEmbedding}
-                                  className="text-xs px-2 py-1"
-                                >
-                                  {candidate.isUpdatingEmbedding ? 'Updating...' : 'Update Embedding'}
-                                </Button>
                                 <Button
                                   onClick={() => handleAddBrand(candidate, index)}
                                   disabled={candidate.isProcessing}
@@ -323,10 +319,9 @@ export function AgentBossControlCenter() {
                                   <XCircle className="w-5 h-5" />
                                 </button>
                               </>
-                            )}
-                            {candidate.isAdded && (
+                            ) : (
                               <span className="text-sm text-green-400">
-                                Added - Pending Approval
+                                {candidate.isUpdatingEmbedding ? 'Updating Embedding...' : 'Added - Pending Approval'}
                               </span>
                             )}
                           </div>
