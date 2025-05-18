@@ -33,16 +33,15 @@ export function AgentBossControlCenter() {
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
   const [analysisTimeouts, setAnalysisTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
-  const [embeddingTimeouts, setEmbeddingTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
     const cleanup = () => {
       Object.values(analysisTimeouts).forEach(timeout => clearTimeout(timeout));
-      Object.values(embeddingTimeouts).forEach(timeout => clearTimeout(timeout));
     }
     return cleanup;
-  }, [analysisTimeouts, embeddingTimeouts]);
+  }, [analysisTimeouts]);
 
   // Poll for analysis status updates
   useEffect(() => {
@@ -203,9 +202,10 @@ export function AgentBossControlCenter() {
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isProcessing: true, error: null } : c
+      i === index ? { ...c, isProcessing: true, error: null, queueError: null } : c
     ));
     setProcessingError(null);
+    setQueueError(null);
 
     try {
       // Get the next ID from the brands_id_seq sequence
@@ -246,6 +246,24 @@ export function AgentBossControlCenter() {
 
       // Store the brand ID for embedding updates
       const brandId = newBrand[0].id;
+      
+      // Queue the brand for analysis
+      const queueResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-analysis`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ brandId })
+        }
+      );
+
+      if (!queueResponse.ok) {
+        const error = await queueResponse.json();
+        throw new Error(error.error || `Failed to queue brand: ${queueResponse.status}`);
+      }
 
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
@@ -257,40 +275,9 @@ export function AgentBossControlCenter() {
         } : c
       ));
 
-      // Call analyze-brands function
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ brandId })
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
-        }
-
-        // Set analysis timeout
-        const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
-        setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
-
-      } catch (analyzeError: any) {
-        console.error('Error analyzing brand:', analyzeError);
-        // Brand was added but analysis failed
-        setCandidates(prev => prev.map((c, i) => 
-          i === index ? { 
-            ...c,
-            isProcessing: false,
-            error: `Brand added successfully. Analysis failed: ${analyzeError.message}`
-          } : c
-        ));
-      }
+      // Set analysis timeout
+      const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
+      setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
     } catch (err: any) {
       console.error('Error adding brand:', err);
       
@@ -397,6 +384,7 @@ export function AgentBossControlCenter() {
   const handleBulkAdd = async () => {
     if (selectedCandidates.length === 0) return;
     
+    setQueueError(null);
     setIsProcessingBulk(true);
     
     try {
@@ -410,8 +398,9 @@ export function AgentBossControlCenter() {
       
       // Clear selection after processing
       setSelectedCandidates([]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error in bulk processing:', err);
+      setQueueError(err.message);
     } finally {
       setIsProcessingBulk(false);
     }
@@ -516,7 +505,7 @@ export function AgentBossControlCenter() {
                         <Button
                           onClick={handleBulkAdd}
                           disabled={isProcessingBulk}
-                          className="flex items-center gap-2"
+                          className={`flex items-center gap-2 ${queueError ? 'bg-red-600 hover:bg-red-700' : ''}`}
                         >
                           {isProcessingBulk ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -525,6 +514,11 @@ export function AgentBossControlCenter() {
                           )}
                           Add Selected ({selectedCandidates.length})
                         </Button>
+                      )}
+                      {queueError && (
+                        <div className="absolute top-full left-0 mt-2 p-2 bg-red-900/50 text-red-200 text-sm rounded-lg border border-red-700/50 whitespace-nowrap">
+                          {queueError}
+                        </div>
                       )}
                     </div>
                   </div>
