@@ -203,13 +203,9 @@ export function AgentBossControlCenter() {
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isProcessing: true, error: null, isAdded: false } : c
+      i === index ? { ...c, isProcessing: true, error: null } : c
     ));
     setProcessingError(null);
-    
-    // Set analysis timeout
-    const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
-    setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
 
     try {
       // Get the next ID from the brands_id_seq sequence
@@ -251,18 +247,11 @@ export function AgentBossControlCenter() {
       // Store the brand ID for embedding updates
       const brandId = newBrand[0].id;
 
-      // Clear analysis timeout since brand was added successfully
-      clearTimeout(analysisTimeouts[index]);
-      setAnalysisTimeouts(prev => {
-        const { [index]: _, ...rest } = prev;
-        return rest;
-      });
-
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
         i === index ? {
           ...c,
-          isProcessing: false,
+          isProcessing: true,
           isAdded: true,
           id: brandId
         } : c
@@ -286,25 +275,24 @@ export function AgentBossControlCenter() {
           const error = await response.json();
           throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
         }
+
+        // Set analysis timeout
+        const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
+        setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
+
       } catch (analyzeError: any) {
         console.error('Error analyzing brand:', analyzeError);
-        // Don't fail the whole operation, just show a warning
+        // Brand was added but analysis failed
         setCandidates(prev => prev.map((c, i) => 
           i === index ? { 
             ...c,
-            error: `Brand added but analysis failed: ${analyzeError.message}`
+            isProcessing: false,
+            error: `Brand added successfully. Analysis failed: ${analyzeError.message}`
           } : c
         ));
       }
     } catch (err: any) {
       console.error('Error adding brand:', err);
-      
-      // Clear analysis timeout
-      clearTimeout(analysisTimeouts[index]);
-      setAnalysisTimeouts(prev => {
-        const { [index]: _, ...rest } = prev;
-        return rest;
-      });
       
       setProcessingError(err.message || 'Failed to process brand');
       
@@ -595,13 +583,13 @@ export function AgentBossControlCenter() {
                                   {candidate.isProcessing ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                   ) : (
-                                    candidate.error ? (
-                                      <Clock className="w-4 h-4" />
-                                    ) : (
-                                      <CheckCircle className="w-4 h-4" />
-                                    )
+                                    <CheckCircle className="w-4 h-4" />
                                   )}
-                                  {candidate.isProcessing ? 'Adding...' : 'Add & Analyze'}
+                                  {candidate.isProcessing ? (
+                                    candidate.isAdded ? 'Analyzing...' : 'Adding...'
+                                  ) : (
+                                    'Add Brand'
+                                  )}
                                 </Button>
                                 <button
                                   onClick={() => handleRejectCandidate(index)}
