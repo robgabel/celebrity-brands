@@ -107,35 +107,46 @@ export function AgentBossControlCenter() {
   const handleLaunchPetra = async () => {
     if (!instructions.trim()) return;
 
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-agent-petra`;
+    console.log('Calling Edge Function:', apiUrl);
+
     setPetraStatus('executing');
     setPetraError(null);
     setCandidates([]);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-agent-petra`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ instructions: instructions.trim() })
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ instructions: instructions.trim() })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `HTTP error! status: ${response.status}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.error || `HTTP error! status: ${response.status}`);
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format from server');
+      }
 
       setCandidates(data);
       setPetraStatus('ready');
     } catch (err: any) {
       console.error('Petra research error:', err);
-      setPetraError(err.message || 'Failed to complete research');
+      setPetraError(
+        err.message === 'Failed to fetch' 
+          ? 'Unable to connect to research service. Please try again.' 
+          : err.message || 'Failed to complete research'
+      );
       setPetraStatus('error');
     }
   };

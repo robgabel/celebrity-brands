@@ -5,7 +5,7 @@ import OpenAI from "npm:openai@4.28.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+  'Access-Control-Allow-Headers': '*',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -50,7 +50,19 @@ serve(async (req: Request) => {
     const { instructions } = await req.json();
 
     if (!instructions) {
-      throw new Error('Instructions are required');
+      return new Response(
+        JSON.stringify({
+          error: 'Instructions are required',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     // Initialize clients
@@ -59,7 +71,19 @@ serve(async (req: Request) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY')!;
 
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
-      throw new Error('Required environment variables are not set');
+      return new Response(
+        JSON.stringify({
+          error: 'Service configuration error',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
