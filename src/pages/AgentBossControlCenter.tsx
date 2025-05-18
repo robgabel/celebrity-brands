@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Bot, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { GlobalNav } from '../components/GlobalNav';
@@ -23,6 +24,35 @@ export function AgentBossControlCenter() {
   const [petraStatus, setPetraStatus] = useState<'ready' | 'executing' | 'error'>('ready');
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
+
+  // Set up Realtime subscription for brand updates
+  useEffect(() => {
+    const subscription = supabase
+      .channel('brand-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'brands'
+        },
+        async (payload) => {
+          // Find the candidate that matches this brand
+          const brandId = payload.new.id;
+          const candidateIndex = candidates.findIndex(c => !c.isAdded);
+          
+          if (candidateIndex !== -1) {
+            // Queue embedding update for the new brand
+            await handleUpdateEmbeddings(brandId, candidateIndex);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [candidates]);
 
   const handleLaunchPetra = async () => {
     if (!instructions.trim()) return;
@@ -103,17 +133,16 @@ export function AgentBossControlCenter() {
       if (insertError) throw insertError;
       if (!newBrand) throw new Error('Failed to create brand');
 
-      // Update candidate with brand ID
+      // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
         i === index ? {
           ...c,
-          id: newBrand.id,
           isProcessing: false,
           isAdded: true
         } : c
       ));
 
-      // Now call analyze-brands function with the new brand ID
+      // Call analyze-brands function
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
         {
@@ -130,9 +159,6 @@ export function AgentBossControlCenter() {
         const error = await response.json();
         throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
       }
-
-      // After successful analysis, queue the embedding update
-      await handleUpdateEmbeddings(newBrand.id, index);
     } catch (err: any) {
       console.error('Error adding brand:', err);
       
