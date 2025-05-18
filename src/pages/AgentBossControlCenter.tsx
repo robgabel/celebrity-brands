@@ -20,6 +20,8 @@ export function AgentBossControlCenter() {
   const [petraStatus, setPetraStatus] = useState<'ready' | 'executing' | 'error'>('ready');
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
+  const [isUpdatingEmbeddings, setIsUpdatingEmbeddings] = useState(false);
+  const [embeddingError, setEmbeddingError] = useState<string | null>(null);
 
   const handleLaunchPetra = async () => {
     if (!instructions.trim()) return;
@@ -140,6 +142,40 @@ export function AgentBossControlCenter() {
     setCandidates(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleUpdateEmbeddings = async (brandId: number) => {
+    setIsUpdatingEmbeddings(true);
+    setEmbeddingError(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-embeddings`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ brandId })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to queue embedding: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to queue embedding');
+      }
+    } catch (err: any) {
+      console.error('Error updating embeddings:', err);
+      setEmbeddingError(err.message);
+    } finally {
+      setIsUpdatingEmbeddings(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       <Helmet>
@@ -243,6 +279,13 @@ export function AgentBossControlCenter() {
                           <div className="flex items-center gap-2">
                             {!candidate.isAdded && (
                               <>
+                                <Button
+                                  onClick={() => handleUpdateEmbeddings(brand.id)}
+                                  disabled={isUpdatingEmbeddings}
+                                  className="text-xs px-2 py-1"
+                                >
+                                  {isUpdatingEmbeddings ? 'Updating...' : 'Update Embedding'}
+                                </Button>
                                 <Button
                                   onClick={() => handleAddBrand(candidate, index)}
                                   disabled={candidate.isProcessing}
