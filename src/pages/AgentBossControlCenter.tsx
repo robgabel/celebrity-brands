@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bot, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
@@ -24,6 +24,7 @@ export function AgentBossControlCenter() {
   const [petraStatus, setPetraStatus] = useState<'ready' | 'executing' | 'error'>('ready');
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
+  const [processingError, setProcessingError] = useState<string | null>(null);
 
   // Set up Realtime subscription for brand updates
   useEffect(() => {
@@ -105,6 +106,7 @@ export function AgentBossControlCenter() {
       if (!seqData) throw new Error('Failed to get next brand ID');
 
       const nextId = seqData;
+      setProcessingError(null);
 
       // Verify the ID is available
       const { error: checkError } = await supabase
@@ -115,6 +117,9 @@ export function AgentBossControlCenter() {
       if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
         throw new Error('ID conflict detected');
       }
+
+      // Clear any previous errors
+      setProcessingError(null);
 
       // Now insert the brand with the next available ID
       const { data: newBrand, error: insertError } = await supabase
@@ -131,6 +136,9 @@ export function AgentBossControlCenter() {
       
       if (insertError) throw insertError;
       if (!newBrand) throw new Error('Failed to create brand');
+
+      // Clear any previous errors
+      setProcessingError(null);
       
       // Store the brand ID for embedding updates
       const brandId = newBrand.id;
@@ -164,6 +172,7 @@ export function AgentBossControlCenter() {
       }
     } catch (err: any) {
       console.error('Error adding brand:', err);
+      setProcessingError(err.message || 'Failed to process brand');
       
       // Update candidate status to error
       setCandidates(prev => prev.map((c, i) => 
@@ -287,6 +296,13 @@ export function AgentBossControlCenter() {
               {petraError && (
                 <div className="p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700/50">
                   {petraError}
+                </div>
+              )}
+
+              {processingError && (
+                <div className="p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700/50 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>{processingError}</span>
                 </div>
               )}
 
