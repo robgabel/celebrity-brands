@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { backOff } from 'exponential-backoff';
 import * as dotenv from 'dotenv';
-import axios from 'axios';
+import fetch from 'cross-fetch';
 
 console.log('Loading environment variables...');
 dotenv.config();
@@ -79,22 +79,19 @@ async function sleep(ms) {
 async function processEmbeddingQueue() {
   const operation = async () => {    
     console.log('\nProcessing embedding queue...');
-    const response = await axios.post(
-      `${SUPABASE_URL}/functions/v1/update-embeddings`,
-      {},
-      {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/update-embeddings`, {
+      method: 'POST',
       headers,
-      timeout: 30000
-      }
-    );
+      body: JSON.stringify({})
+    });
 
-    if (response.status >= 400) { 
-      const errorData = response.data;
-      console.error('Edge function error:', errorData);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Edge function error:', errorData.error || response.statusText);
       throw new Error(`Edge function failed with status ${response.status}`);
     }
 
-    const data = response.data;
+    const data = await response.json();
     if (!data?.success) {
       console.error('Edge function returned error:', data);
       throw new Error(data?.error || 'Edge function failed');
@@ -160,7 +157,7 @@ async function main() {
     console.log('Fetching brands with NULL embeddings...');
     
     const { data: brands, error } = await supabase
-      .from('brands') 
+      .from('brands')
       .select('id, name')
       .eq('id', 8);
 
