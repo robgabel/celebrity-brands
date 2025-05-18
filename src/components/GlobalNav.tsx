@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { AdminRibbon } from './AdminRibbon';
 import { useDebounce } from '../hooks/useDebounce';
+import { useEffect, useState } from 'react';
 
 interface SearchResult {
   id: number;
@@ -41,6 +42,7 @@ export function GlobalNav({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const [error, setError] = useState<string | null>(null);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -55,6 +57,9 @@ export function GlobalNav({
   }, []);
 
   useEffect(() => {
+    console.log('Search query changed:', searchQuery);
+    console.log('Debounced search:', debouncedSearch);
+    
     if (debouncedSearch.trim()) {
       fetchSuggestions();
     } else {
@@ -64,16 +69,24 @@ export function GlobalNav({
 
   const fetchSuggestions = async () => {
     setIsLoadingSuggestions(true);
+    setError(null);
+    console.log('Fetching suggestions for:', debouncedSearch);
+    
     try {
       // Search brands with IDs
       const { data: brands, error: brandsError } = await supabase
         .from('brands')
         .select('id, name, creators')
         .eq('approval_status', 'approved')
-        .or(`name.ilike.%${debouncedSearch}%,creators.ilike.%${debouncedSearch}%`)
+        .or(`name.ilike.%${debouncedSearch}%,creators.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`)
         .limit(5);
 
-      if (brandsError) throw brandsError;
+      if (brandsError) {
+        console.error('Brands query error:', brandsError);
+        throw brandsError;
+      }
+
+      console.log('Brands results:', brands);
 
       // Search categories with distinct values
       const { data: categories, error: categoriesError } = await supabase
@@ -83,7 +96,12 @@ export function GlobalNav({
         .ilike('product_category', `%${debouncedSearch}%`)
         .limit(3);
 
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error('Categories query error:', categoriesError);
+        throw categoriesError;
+      }
+
+      console.log('Categories results:', categories);
 
       const uniqueCategories = Array.from(
         new Set(categories?.map(item => item.product_category) || [])
@@ -102,9 +120,11 @@ export function GlobalNav({
         }))
       ];
 
+      console.log('Final suggestions:', suggestions);
       setSuggestions(suggestions);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
+      setError(err.message);
       setSuggestions([]);
     } finally {
       setIsLoadingSuggestions(false);
@@ -169,6 +189,8 @@ export function GlobalNav({
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setShowSuggestions(true);
+                  console.log('Input changed:', e.target.value);
+                  console.log('showSuggestions:', true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 className="w-64 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
@@ -189,12 +211,20 @@ export function GlobalNav({
               )}
             </form>
 
-            {showSuggestions && suggestions.length > 0 && (
+            {showSuggestions && (suggestions.length > 0 || isLoadingSuggestions || error) && (
               <div className="absolute top-full left-0 w-full mt-2 bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl overflow-hidden z-[200]">
                 {isLoadingSuggestions ? (
                   <div className="p-4 text-center text-gray-400 flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span>Loading suggestions...</span>
+                  </div>
+                ) : error ? (
+                  <div className="p-4 text-center text-red-400">
+                    {error}
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <div className="p-4 text-center text-gray-400">
+                    No matches found
                   </div>
                 ) : (
                   <ul>
