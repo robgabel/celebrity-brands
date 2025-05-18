@@ -33,14 +33,53 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Call the queue_brand_analysis function
+    // First check if brand exists
+    const { data: existingBrand, error: checkError } = await supabase
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+      throw checkError;
+    }
+
+    if (existingBrand) {
+      // Brand exists, just queue it for analysis
+      const { data, error } = await supabase
+        .from('brand_analysis_queue')
+        .insert([
+          { brand_id: brandId }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Brand queued for analysis' }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
+    // Brand doesn't exist, create analysis queue entry
     const { data, error } = await supabase
-      .rpc('queue_brand_analysis', { p_brand_id: brandId });
+      .from('brand_analysis_queue')
+      .insert([
+        { brand_id: brandId }
+      ])
+      .select()
+      .single();
 
     if (error) throw error;
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({ success: true, message: 'Brand queued for analysis' }),
       {
         headers: {
           ...corsHeaders,
