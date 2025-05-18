@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
 import { backOff } from 'exponential-backoff';
 import * as dotenv from 'dotenv';
+import { fetch } from 'node:fetch';
 
 console.log('Loading environment variables...');
 dotenv.config();
@@ -31,31 +31,12 @@ console.log('\nInitializing Supabase client...');
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('Supabase client initialized ✅');
 
-// Initialize axios instance with improved error handling
-const api = axios.create({
-  baseURL: SUPABASE_URL,
-  timeout: 60000,
-  headers: {
-    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  validateStatus: (status) => status < 500
-});
-
-api.interceptors.response.use(
-  response => {
-    if (response.status >= 400) {
-      console.error(`API Error (${response.status}):`, response.data);
-      throw new Error(`API returned status ${response.status}`);
-    }
-    return response;
-  },
-  error => {
-    console.error('API Request Failed:', error.message);
-    throw error;
-  }
-);
+// Headers for fetch requests
+const headers = {
+  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+};
 
 async function updateBrandEmbedding(brandId) {
   console.log(`\nUpdating embedding for brand ID ${brandId}...`);
@@ -98,21 +79,26 @@ async function sleep(ms) {
 async function processEmbeddingQueue() {
   const operation = async () => {    
     console.log('\nProcessing embedding queue...');
-    
-    const response = await api.post('/functions/v1/update-embeddings');
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/update-embeddings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({})
+    });
 
     if (response.status >= 400) {
-      console.error('Edge function error:', response.data);
+      const errorData = await response.json();
+      console.error('Edge function error:', errorData);
       throw new Error(`Edge function failed with status ${response.status}`);
     }
 
-    if (!response.data?.success) {
-      console.error('Edge function returned error:', response.data);
-      throw new Error(response.data?.error || 'Edge function failed');
+    const data = await response.json();
+    if (!data?.success) {
+      console.error('Edge function returned error:', data);
+      throw new Error(data?.error || 'Edge function failed');
     }
 
     console.log('Successfully processed embedding queue ✅');
-    return response.data;
+    return data;
   };
 
   try {
