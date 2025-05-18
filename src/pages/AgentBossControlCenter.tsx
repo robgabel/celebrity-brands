@@ -148,7 +148,7 @@ export function AgentBossControlCenter() {
     setCandidates(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateEmbeddings = async (brandId: number) => {
+  const handleUpdateEmbeddings = async (brandId: number, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
       i === index ? { ...c, isUpdatingEmbedding: true, embeddingError: null } : c
