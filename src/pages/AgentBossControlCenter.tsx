@@ -210,7 +210,7 @@ export function AgentBossControlCenter() {
           name: candidate.name,
           creators: candidate.creators,
           description: candidate.description,
-          approval_status: 'pending'
+          approval_status: 'approved'
         }])
         .select();
       
@@ -480,7 +480,7 @@ export function AgentBossControlCenter() {
                                       <Clock className="w-4 h-4" />
                                     ) : (
                                       <CheckCircle className="w-4 h-4" />
-                                    )
+                                    'Added Successfully'
                                   )}
                                   {candidate.isProcessing ? 'Adding...' : 'Add & Analyze'}
                                 </Button>
