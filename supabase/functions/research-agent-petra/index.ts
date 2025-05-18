@@ -12,47 +12,30 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are an expert market researcher specializing in celebrity and influencer brands. Your task is to find potential new brands based on the administrator's instructions.
 
 CRITICAL REQUIREMENTS:
-1. NEVER suggest brands that are similar to existing ones in the exclusion list:
-   - Check brand names for similar spellings or variations
-   - Check creator names for variations (e.g., "LeBron James" vs "Lebron James Sr.")
-   - Check product categories and descriptions for similar offerings
-   - If in doubt about similarity, exclude the brand
-
-2. For each potential brand, verify:
-   - The brand actually exists and is currently active
-   - The celebrity/influencer has a significant ownership stake (not just endorsement)
-   - The brand name and ownership information is accurate
-   - The brand is not a subsidiary or variant of an existing brand
-
-3. Return response in this EXACT format:
+1. Return response in this EXACT format:
 {
   "candidates": [
     {
       "name": "Exact brand name",
       "creators": "Full name(s) of the celebrity/influencer owner(s)",
-      "description": "1-2 sentences about the brand",
-      "verification": {
-        "ownership_confirmed": true,
-        "ownership_source": "Source URL or reference",
-        "active_status": true,
-        "launch_date": "YYYY-MM or YYYY"
-      }
+      "description": "1-2 sentences about the brand"
     }
   ]
 }
 
-4. Return a maximum of 10 candidates that meet ALL criteria:
+2. Only return brands that are OWNED or CO-OWNED by celebrities/influencers
+3. Exclude any brands where celebrities are ONLY endorsers or ambassadors
+4. Focus on finding LEGITIMATE, VERIFIABLE brands
+5. Return a maximum of 10 candidates in the array with:
    - name: Exact brand name
    - creators: Full name(s) of the celebrity/influencer owner(s)
    - description: 1-2 sentences about the brand
-   - verification: Proof of ownership and active status
 
 IMPORTANT:
-- Check each brand against the exclusion list using fuzzy matching
-- Verify ownership through multiple sources when possible
-- Exclude brands where ownership is unclear or disputed
-- Prioritize brands with clear launch dates and verifiable information
-- If a brand seems similar to an excluded one, err on the side of caution`;
+- Exclude any brands in the provided exclusion list
+- Double-check that creators are actual owners, not just endorsers
+- Prioritize newer or less well-known brands that match the criteria
+- Ensure descriptions are factual and professional`;
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -118,25 +101,6 @@ serve(async (req: Request) => {
       ?.map(b => `${b.name} (by ${b.creators})`)
       .join('\n');
 
-    // Enhanced exclusion list with categories
-    const exclusionContext = existingBrands
-      ?.map(b => ({
-        name: b.name,
-        creators: b.creators,
-        category: b.product_category
-      }))
-      .reduce((acc, brand) => {
-        acc[brand.category] = acc[brand.category] || [];
-        acc[brand.category].push(`${brand.name} (by ${brand.creators})`);
-        return acc;
-      }, {} as Record<string, string[]>);
-
-    const formattedExclusions = Object.entries(exclusionContext || {})
-      .map(([category, brands]) => 
-        `${category}:\n${brands.map(b => `- ${b}`).join('\n')}`
-      )
-      .join('\n\n');
-
     // Call GPT-4.1
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1",
@@ -148,16 +112,14 @@ serve(async (req: Request) => {
 
 ${instructions}
 
-IMPORTANT: Check against these existing brands by category:
-
-${formattedExclusions}
+Exclude these existing brands:
+${exclusionList}
 
 Remember to:
-1. CAREFULLY check for similar brands in each category
-2. Verify actual ownership (not just endorsement)
-3. Include verification details for each suggestion
-4. Maximum 10 results
-5. If unsure about similarity, exclude the brand`
+1. Only include brands actually OWNED by celebrities/influencers
+2. Verify ownership claims
+3. Return results in the exact JSON format specified
+4. Maximum 10 results`
         }
       ],
       temperature: 0.7,
@@ -190,19 +152,7 @@ Remember to:
         if (!candidate.description || typeof candidate.description !== 'string') {
           throw new Error('Invalid or missing description field');
         }
-        if (!candidate.verification || typeof candidate.verification !== 'object') {
-          throw new Error('Invalid or missing verification object');
-        }
-        if (typeof candidate.verification.ownership_confirmed !== 'boolean') {
-          throw new Error('Invalid or missing ownership confirmation');
-        }
-        if (!candidate.verification.ownership_source) {
-          throw new Error('Missing ownership source');
-        }
       }
-
-      // Filter out candidates without confirmed ownership
-      candidates = candidates.filter(c => c.verification.ownership_confirmed);
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
       throw new Error(`Invalid response format from OpenAI: ${error.message}`);
