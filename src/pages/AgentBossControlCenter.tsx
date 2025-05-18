@@ -29,6 +29,7 @@ export function AgentBossControlCenter() {
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [timeouts, setTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
+  const [analysisStatus, setAnalysisStatus] = useState<{ [key: number]: string }>({});
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -36,6 +37,43 @@ export function AgentBossControlCenter() {
       Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
     };
   }, [timeouts]);
+
+  // Poll for analysis status updates
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      const pendingBrands = candidates.filter(c => c.isProcessing || c.isUpdatingEmbedding);
+      
+      if (pendingBrands.length === 0) {
+        return;
+      }
+
+      try {
+        const { data: statusData, error: statusError } = await supabase
+          .from('brand_analysis_status')
+          .select('brand_id, status, error')
+          .in('brand_id', pendingBrands.map(b => b.id!))
+          .not('status', 'eq', 'completed');
+
+        if (statusError) throw statusError;
+
+        if (statusData) {
+          statusData.forEach(status => {
+            if (status.status === 'error' || status.status === 'timeout') {
+              setCandidates(prev => prev.map(c => 
+                c.id === status.brand_id 
+                  ? { ...c, error: status.error || 'Analysis failed', isProcessing: false }
+                  : c
+              ));
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error polling analysis status:', err);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [candidates]);
 
   // Set up Realtime subscription for brand updates
   useEffect(() => {
@@ -114,6 +152,22 @@ export function AgentBossControlCenter() {
     ));
   };
 
+  const checkAnalysisStatus = async (brandId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('brand_analysis_status')
+        .select('status, error')
+        .eq('brand_id', brandId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error checking analysis status:', err);
+      return null;
+    }
+  };
+
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
@@ -122,6 +176,7 @@ export function AgentBossControlCenter() {
     setProcessingError(null);
     
     // Set analysis timeout
+    const startTime = Date.now();
     const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
     setTimeouts(prev => ({ ...prev, [`analysis-${index}`]: analysisTimeout }));
 
