@@ -57,7 +57,7 @@ api.interceptors.response.use(
   }
 );
 
-async function updateBrandEmbedding(brandId: number) {
+async function updateBrandEmbedding(brandId) {
   console.log(`\nUpdating embedding for brand ID ${brandId}...`);
 
   const operation = async () => {
@@ -93,41 +93,6 @@ async function updateBrandEmbedding(brandId: number) {
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function updateBrandEmbedding(brandId) {
-  const operation = async () => {
-    console.log(`Updating embedding for brand ID ${brandId}...`);
-
-    try {
-      const { data, error } = await supabase
-        .rpc('update_brand_embedding', { brand_id: brandId });
-
-      if (error) throw error;
-
-      return true;
-    } catch (err) {
-      console.error(`RPC error:`, err);
-      throw err;
-    }
-  };
-
-  try {
-    await backOff(operation, {
-      numOfAttempts: MAX_RETRIES,
-      startingDelay: INITIAL_RETRY_DELAY,
-      maxDelay: MAX_RETRY_DELAY,
-      jitter: 'full',
-      retry: (e, attemptNumber) => {
-        console.log(`Attempt ${attemptNumber} failed: ${e.message}`);
-        return attemptNumber < MAX_RETRIES;
-      }
-    });
-    return true;
-  } catch (error) {
-    console.error(`❌ Failed to update embedding for brand ID ${brandId} after ${MAX_RETRIES} attempts:`, error.message);
-    return false;
-  }
 }
 
 async function processEmbeddingQueue() {
