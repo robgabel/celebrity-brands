@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { backOff } from 'exponential-backoff';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
-// Enhanced retry configuration
+console.log('Loading environment variables...');
+dotenv.config();
+
 const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 1000;
 const MAX_RETRY_DELAY = 5000;
@@ -11,34 +13,83 @@ const BATCH_SIZE = 2;
 const DELAY_BETWEEN_BATCHES = 5000;
 const DELAY_BETWEEN_BRANDS = 3000;
 
-console.log('\nStarting brand embeddings update script...');
-
-// Load environment variables
-dotenv.config();
-
+// Validate environment variables
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('SUPABASE_URL:', SUPABASE_URL ? 'Loaded ✅' : 'MISSING ❌');
+console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? 'Loaded ✅' : 'MISSING ❌');
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('Missing required environment variables');
+  console.error('Required environment variables are missing!');
   process.exit(1);
 }
 
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('\nInitializing Supabase client...');
 
-// Initialize axios instance with defaults
+// Initialize Supabase client with logging
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Supabase client initialized ✅');
+
+// Initialize axios instance with improved error handling
 const api = axios.create({
-  timeout: 30000,
   baseURL: SUPABASE_URL,
+  timeout: 60000,
   headers: {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  validateStatus: (status) => status >= 200 && status < 500, // Don't retry on 5xx errors
-  timeout: 60000 // 60 second timeout
+  validateStatus: (status) => status < 500
 });
+
+api.interceptors.response.use(
+  response => {
+    if (response.status >= 400) {
+      console.error(`API Error (${response.status}):`, response.data);
+      throw new Error(`API returned status ${response.status}`);
+    }
+    return response;
+  },
+  error => {
+    console.error('API Request Failed:', error.message);
+    throw error;
+  }
+);
+
+async function updateBrandEmbedding(brandId: number) {
+  console.log(`\nUpdating embedding for brand ID ${brandId}...`);
+
+  const operation = async () => {
+    try {
+      console.log('Calling update_brand_embedding_manual RPC...');
+      const { data, error } = await supabase
+        .rpc('update_brand_embedding_manual', { brand_id: brandId });
+
+      if (error) {
+        console.error('RPC Error:', error);
+        throw error;
+      }
+
+      console.log('RPC call successful ✅');
+      return true;
+    } catch (err) {
+      console.error('Operation failed:', err);
+      throw err;
+    }
+  };
+
+  return backOff(operation, {
+    numOfAttempts: MAX_RETRIES,
+    startingDelay: INITIAL_RETRY_DELAY,
+    maxDelay: MAX_RETRY_DELAY,
+    jitter: 'full',
+    retry: (e, attemptNumber) => {
+      console.log(`Attempt ${attemptNumber} failed:`, e.message);
+      return attemptNumber < MAX_RETRIES;
+    }
+  });
+}
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -81,14 +132,21 @@ async function updateBrandEmbedding(brandId) {
 
 async function processEmbeddingQueue() {
   const operation = async () => {    
-    // Call the Edge Function to process the queue
+    console.log('\nProcessing embedding queue...');
+    
     const response = await api.post('/functions/v1/update-embeddings');
 
-    if (!response.data?.success) {
-      throw new Error(response.data?.error || 'Failed to process queue');
+    if (response.status >= 400) {
+      console.error('Edge function error:', response.data);
+      throw new Error(`Edge function failed with status ${response.status}`);
     }
 
-    console.log('✅ Successfully processed embedding queue:', response.data);
+    if (!response.data?.success) {
+      console.error('Edge function returned error:', response.data);
+      throw new Error(response.data?.error || 'Edge function failed');
+    }
+
+    console.log('Successfully processed embedding queue ✅');
     return response.data;
   };
 
@@ -99,12 +157,12 @@ async function processEmbeddingQueue() {
       maxDelay: MAX_RETRY_DELAY,
       jitter: 'full',
       retry: (e, attemptNumber) => {
-        console.log(`Queue processing attempt ${attemptNumber} failed: ${e.message}`);
+        console.log(`Queue processing attempt ${attemptNumber} failed:`, e.message);
         return attemptNumber < MAX_RETRIES;
       }
     });
   } catch (error) {
-    console.error('❌ Failed to process embedding queue:', error.message);
+    console.error('Failed to process embedding queue ❌:', error);
     return null;
   }
 }
