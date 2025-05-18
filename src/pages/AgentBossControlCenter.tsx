@@ -32,13 +32,17 @@ export function AgentBossControlCenter() {
   const [analysisStatus, setAnalysisStatus] = useState<{ [key: number]: string }>({});
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
+  const [analysisTimeouts, setAnalysisTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
+  const [embeddingTimeouts, setEmbeddingTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
 
   // Cleanup timeouts on unmount
   useEffect(() => {
-    return () => {
-      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
-    };
-  }, [timeouts]);
+    const cleanup = () => {
+      Object.values(analysisTimeouts).forEach(timeout => clearTimeout(timeout));
+      Object.values(embeddingTimeouts).forEach(timeout => clearTimeout(timeout));
+    }
+    return cleanup;
+  }, [analysisTimeouts, embeddingTimeouts]);
 
   // Poll for analysis status updates
   useEffect(() => {
@@ -54,16 +58,30 @@ export function AgentBossControlCenter() {
           .from('brand_analysis_status')
           .select('brand_id, status, error')
           .in('brand_id', pendingBrands.map(b => b.id!))
-          .not('status', 'eq', 'completed');
+          .in('status', ['pending', 'processing', 'error', 'timeout']);
 
         if (statusError) throw statusError;
 
         if (statusData) {
           statusData.forEach(status => {
-            if (status.status === 'error' || status.status === 'timeout') {
+            const brandId = status.brand_id;
+            if (status.status === 'completed') {
+              // Clear timeouts for completed analysis
+              if (analysisTimeouts[brandId]) {
+                clearTimeout(analysisTimeouts[brandId]);
+                setAnalysisTimeouts(prev => {
+                  const { [brandId]: _, ...rest } = prev;
+                  return rest;
+                });
+              }
+            } else if (status.status === 'error' || status.status === 'timeout') {
               setCandidates(prev => prev.map(c => 
-                c.id === status.brand_id 
-                  ? { ...c, error: status.error || 'Analysis failed', isProcessing: false }
+                c.id === brandId
+                  ? { 
+                    ...c, 
+                    error: status.error || `Analysis ${status.status}. The brand was added but analysis is incomplete.`,
+                    isProcessing: false 
+                  }
                   : c
               ));
             }
@@ -72,7 +90,7 @@ export function AgentBossControlCenter() {
       } catch (err) {
         console.error('Error polling analysis status:', err);
       }
-    }, 5000); // Poll every 5 seconds
+    }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
   }, [candidates]);
@@ -190,9 +208,8 @@ export function AgentBossControlCenter() {
     setProcessingError(null);
     
     // Set analysis timeout
-    const startTime = Date.now();
     const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
-    setTimeouts(prev => ({ ...prev, [`analysis-${index}`]: analysisTimeout }));
+    setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
 
     try {
       // Get the next ID from the brands_id_seq sequence
@@ -235,9 +252,9 @@ export function AgentBossControlCenter() {
       const brandId = newBrand[0].id;
 
       // Clear analysis timeout since brand was added successfully
-      clearTimeout(timeouts[`analysis-${index}`]);
-      setTimeouts(prev => {
-        const { [`analysis-${index}`]: _, ...rest } = prev;
+      clearTimeout(analysisTimeouts[index]);
+      setAnalysisTimeouts(prev => {
+        const { [index]: _, ...rest } = prev;
         return rest;
       });
 
@@ -283,7 +300,11 @@ export function AgentBossControlCenter() {
       console.error('Error adding brand:', err);
       
       // Clear analysis timeout
-      clearTimeout(timeouts[`analysis-${index}`]);
+      clearTimeout(analysisTimeouts[index]);
+      setAnalysisTimeouts(prev => {
+        const { [index]: _, ...rest } = prev;
+        return rest;
+      });
       
       setProcessingError(err.message || 'Failed to process brand');
       
