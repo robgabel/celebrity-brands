@@ -219,14 +219,19 @@ export function AgentBossControlCenter() {
 
       const nextId = seqData;
 
-      // Verify the ID is available
-      const { error: checkError } = await supabase
+      // First check if brand exists
+      const { data: existingBrand, error: checkError } = await supabase
         .from('brands')
         .select('id')
-        .eq('id', nextId);
+        .eq('id', nextId)
+        .single();
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
-        throw new Error('ID conflict detected');
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+        throw checkError;
+      }
+
+      if (existingBrand) {
+        throw new Error('Brand ID conflict detected. Please try again.');
       }
 
       // Now insert the brand with the next available ID
@@ -239,13 +244,20 @@ export function AgentBossControlCenter() {
           description: candidate.description,
           approval_status: 'approved'
         }])
-        .select();
+        .select()
+        .single();
       
-      if (insertError) throw insertError;
-      if (!newBrand?.[0]) throw new Error('Failed to create brand');
+      if (insertError) {
+        if (insertError.code === '23505') { // Unique violation
+          throw new Error('Brand ID conflict detected. Please try again.');
+        }
+        throw insertError;
+      }
+
+      if (!newBrand) throw new Error('Failed to create brand');
 
       // Store the brand ID for embedding updates
-      const brandId = newBrand[0].id;
+      const brandId = newBrand.id;
       
       // Queue the brand for analysis
       const queueResponse = await fetch(
