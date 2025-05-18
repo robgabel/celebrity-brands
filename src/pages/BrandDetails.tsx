@@ -6,10 +6,6 @@ import { supabase } from '../lib/supabase';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { getCategoryColor } from '../lib/categoryUtils';
 import { getBrandNews } from '../lib/newsApi';
-import { getWikipediaPageViews, TrendResponse } from '../services/wikipediaTrendsService';
-import { getDomainRanking, RankingResponse } from '../services/domainRankingService';
-import { TrendChart } from '../components/TrendChart';
-import { DomainRanking } from '../components/DomainRanking';
 import { GlobalNav } from '../components/GlobalNav';
 import { NewsFeedback } from '../components/NewsFeedback';
 import { Button } from '../components/Button';
@@ -59,12 +55,6 @@ export function BrandDetails() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [approvalSuccess, setApprovalSuccess] = useState(false);
-  const [trendData, setTrendData] = useState<TrendResponse | null>(null);
-  const [trendLoading, setTrendLoading] = useState(false);
-  const [trendError, setTrendError] = useState<string | null>(null);
-  const [rankingData, setRankingData] = useState<RankingResponse | null>(null);
-  const [rankingLoading, setRankingLoading] = useState(false);
-  const [rankingError, setRankingError] = useState<string | null>(null);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [storyError, setStoryError] = useState<string | null>(null);
   const [showVersionDialog, setShowVersionDialog] = useState(false);
@@ -135,43 +125,8 @@ export function BrandDetails() {
   useEffect(() => {
     if (brand) {
       fetchBrandNews(brand.name);
-      fetchBrandTrends(brand.name);
-      fetchDomainRanking(brand.name, brand.homepage_url);
     }
   }, [brand]);
-
-  const fetchBrandTrends = async (brandName: string) => {
-    setTrendLoading(true);
-    setTrendError(null);
-    try {
-      const data = await getWikipediaPageViews(brandName);
-      setTrendData(data);
-    } catch (err: any) {
-      console.error('Error fetching trends:', err);
-      setTrendError(err.message);
-    } finally {
-      setTrendLoading(false);
-    }
-  };
-
-  const fetchDomainRanking = async (brandName: string, homepageUrl: string | null) => {
-    setRankingLoading(true);
-    setRankingError(null);
-    try {
-      // Try homepage URL first, fallback to brand name
-      const domain = homepageUrl ? 
-        new URL(homepageUrl).hostname :
-        `${brandName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
-        
-      const data = await getDomainRanking(domain);
-      setRankingData(data);
-    } catch (err: any) {
-      console.error('Error fetching domain ranking:', err);
-      setRankingError(err.message);
-    } finally {
-      setRankingLoading(false);
-    }
-  };
 
   const fetchBrandNews = async (brandName: string) => {
     setNewsLoading(true);
@@ -515,18 +470,6 @@ export function BrandDetails() {
                 </div>
               )}
             </div>
-
-            <DomainRanking
-              data={rankingData}
-              isLoading={rankingLoading}
-              error={rankingError}
-            />
-
-            <TrendChart
-              data={trendData}
-              isLoading={trendLoading}
-              error={trendError}
-            />
 
             <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
               <div className="flex items-center gap-2 mb-4">
