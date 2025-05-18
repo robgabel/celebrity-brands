@@ -27,7 +27,6 @@ export function GlobalNav({
   showFavoritesOnly = false,
   hasFavorites = false
 }: GlobalNavProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
