@@ -168,7 +168,7 @@ export function GlobalNav({
               <div className="absolute top-full left-0 w-full mt-2 bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl overflow-hidden z-[200]">
                 {isLoadingSuggestions ? (
                   <div className="p-4 text-center text-gray-400">
-                    Loading suggestions...
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-500 mx-auto"></div>
                   </div>
                 ) : (
                   <ul>
@@ -179,7 +179,11 @@ export function GlobalNav({
                           onClick={() => {
                             setSearchQuery(suggestion.text);
                             setShowSuggestions(false);
-                            navigateToSearch(suggestion.text, suggestion.type === 'category' ? 'category' : undefined);
+                            if (suggestion.type === 'brand') {
+                              navigate(`/brands/${encodeURIComponent(suggestion.text)}`);
+                            } else {
+                              navigateToSearch(suggestion.text, 'category');
+                            }
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-gray-700/50 transition-colors duration-150 flex items-start gap-3 relative"
                         >

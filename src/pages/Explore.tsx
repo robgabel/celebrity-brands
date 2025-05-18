@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Grid3X3, List, TrendingUp, TrendingDown } from 'lucide-react';
+import { Grid3X3, List, TrendingUp, TrendingDown } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
@@ -333,23 +333,13 @@ export function ExplorePage() {
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-gray-100">
                 Explore Celebrity & Creator Brands
               </h1>
               <p className="text-gray-400">Showing {totalItems} brands</p>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-none">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search brands..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
-                />
-              </div>
+            <div className="flex items-center gap-2">
               <div className="flex gap-1 border border-gray-700 rounded-lg bg-gray-800">
                 <button
                   onClick={() => setViewMode('grid')}
