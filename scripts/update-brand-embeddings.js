@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { backOff } from 'exponential-backoff';
 import * as dotenv from 'dotenv';
-import { fetch } from 'node:fetch';
+import fetch from 'cross-fetch';
 
 console.log('Loading environment variables...');
 dotenv.config();
