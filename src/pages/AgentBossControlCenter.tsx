@@ -480,7 +480,7 @@ export function AgentBossControlCenter() {
                                       <Clock className="w-4 h-4" />
                                     ) : (
                                       <CheckCircle className="w-4 h-4" />
-                                    'Added Successfully'
+                                    )
                                   )}
                                   {candidate.isProcessing ? 'Adding...' : 'Add & Analyze'}
                                 </Button>
