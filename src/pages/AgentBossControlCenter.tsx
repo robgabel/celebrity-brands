@@ -94,32 +94,31 @@ export function AgentBossControlCenter() {
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isProcessing: true, error: null } : c
+      i === index ? { ...c, isProcessing: true, error: null, isAdded: false } : c
     ));
+    setProcessingError(null);
 
     try {
       // Get the next ID from the brands_id_seq sequence
       const { data: seqData, error: seqError } = await supabase
         .rpc('next_brand_id');
 
-      if (seqError) throw seqError;
+      if (seqError) {
+        throw new Error(`Failed to get next brand ID: ${seqError.message}`);
+      }
       if (!seqData) throw new Error('Failed to get next brand ID');
 
       const nextId = seqData;
-      setProcessingError(null);
 
       // Verify the ID is available
       const { error: checkError } = await supabase
         .from('brands')
         .select('id')
-        .eq('id', nextId)
+        .eq('id', nextId);
 
       if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
         throw new Error('ID conflict detected');
       }
-
-      // Clear any previous errors
-      setProcessingError(null);
 
       // Now insert the brand with the next available ID
       const { data: newBrand, error: insertError } = await supabase
@@ -131,17 +130,13 @@ export function AgentBossControlCenter() {
           description: candidate.description,
           approval_status: 'pending'
         }])
-        .select()
-        .single();
+        .select();
       
       if (insertError) throw insertError;
-      if (!newBrand) throw new Error('Failed to create brand');
+      if (!newBrand?.[0]) throw new Error('Failed to create brand');
 
-      // Clear any previous errors
-      setProcessingError(null);
-      
       // Store the brand ID for embedding updates
-      const brandId = newBrand.id;
+      const brandId = newBrand[0].id;
 
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
@@ -154,21 +149,32 @@ export function AgentBossControlCenter() {
       ));
 
       // Call analyze-brands function
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ brandId })
-        }
-      );
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ brandId })
+          }
+        );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Failed to analyze brand: ${response.status}`);
+        }
+      } catch (analyzeError: any) {
+        console.error('Error analyzing brand:', analyzeError);
+        // Don't fail the whole operation, just show a warning
+        setCandidates(prev => prev.map((c, i) => 
+          i === index ? { 
+            ...c,
+            error: `Brand added but analysis failed: ${analyzeError.message}`
+          } : c
+        ));
       }
     } catch (err: any) {
       console.error('Error adding brand:', err);
