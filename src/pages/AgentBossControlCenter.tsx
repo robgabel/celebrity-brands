@@ -107,13 +107,12 @@ export function AgentBossControlCenter() {
       const nextId = seqData;
 
       // Verify the ID is available
-      const { data: existingBrand, error: checkError } = await supabase
+      const { error: checkError } = await supabase
         .from('brands')
         .select('id')
         .eq('id', nextId)
-        .single();
 
-      if (checkError?.code !== 'PGRST116') { // PGRST116 means no rows returned
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
         throw new Error('ID conflict detected');
       }
 
@@ -129,16 +128,20 @@ export function AgentBossControlCenter() {
         }])
         .select()
         .single();
-
+      
       if (insertError) throw insertError;
       if (!newBrand) throw new Error('Failed to create brand');
+      
+      // Store the brand ID for embedding updates
+      const brandId = newBrand.id;
 
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
         i === index ? {
           ...c,
           isProcessing: false,
-          isAdded: true
+          isAdded: true,
+          id: brandId
         } : c
       ));
 
@@ -151,7 +154,7 @@ export function AgentBossControlCenter() {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ brandId: newBrand.id })
+          body: JSON.stringify({ brandId })
         }
       );
 
