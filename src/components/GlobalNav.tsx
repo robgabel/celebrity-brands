@@ -115,7 +115,7 @@ export function GlobalNav({
   };
 
   return (
-    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50 relative z-50">
+    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50 relative z-[100]">
       {isAdmin && <AdminRibbon />}
       <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center gap-8">
@@ -136,7 +136,7 @@ export function GlobalNav({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative search-container z-50">
+          <div className="relative search-container">
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
@@ -165,7 +165,7 @@ export function GlobalNav({
             </form>
 
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 w-full mt-2 bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl overflow-hidden">
+              <div className="absolute top-full left-0 w-full mt-2 bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl overflow-hidden z-[200]">
                 {isLoadingSuggestions ? (
                   <div className="p-4 text-center text-gray-400">
                     Loading suggestions...
@@ -181,7 +181,7 @@ export function GlobalNav({
                             setShowSuggestions(false);
                             navigateToSearch(suggestion.text, suggestion.type === 'category' ? 'category' : undefined);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-700/50 transition-colors duration-150 flex items-start gap-3"
+                          className="w-full text-left px-4 py-3 hover:bg-gray-700/50 transition-colors duration-150 flex items-start gap-3 relative"
                         >
                           <Search className="w-5 h-5 text-gray-400 mt-0.5" />
                           <div>
