@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { backOff } from 'exponential-backoff';
 import * as dotenv from 'dotenv';
-import fetch from 'cross-fetch';
 
 console.log('Loading environment variables...');
 dotenv.config();
@@ -27,25 +26,18 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 console.log('\nInitializing Supabase client...');
 
-// Initialize Supabase client with logging
+// Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('Supabase client initialized ✅');
-
-// Headers for fetch requests
-const headers = {
-  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-};
 
 async function updateBrandEmbedding(brandId) {
   console.log(`\nUpdating embedding for brand ID ${brandId}...`);
 
   const operation = async () => {
     try {
-      console.log('Calling update_brand_embedding_manual RPC...');
+      console.log('Calling update_brand_embedding RPC...');
       const { data, error } = await supabase
-        .rpc('update_brand_embedding_manual', { brand_id: brandId });
+        .rpc('update_brand_embedding', { brand_id: brandId });
 
       if (error) {
         console.error('RPC Error:', error);
@@ -76,48 +68,6 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function processEmbeddingQueue() {
-  const operation = async () => {    
-    console.log('\nProcessing embedding queue...');
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/update-embeddings`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({})
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Edge function error:', errorData.error || response.statusText);
-      throw new Error(`Edge function failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data?.success) {
-      console.error('Edge function returned error:', data);
-      throw new Error(data?.error || 'Edge function failed');
-    }
-
-    console.log('Successfully processed embedding queue ✅');
-    return data;
-  };
-
-  try {
-    return await backOff(operation, {
-      numOfAttempts: MAX_RETRIES,
-      startingDelay: INITIAL_RETRY_DELAY,
-      maxDelay: MAX_RETRY_DELAY,
-      jitter: 'full',
-      retry: (e, attemptNumber) => {
-        console.log(`Queue processing attempt ${attemptNumber} failed:`, e.message);
-        return attemptNumber < MAX_RETRIES;
-      }
-    });
-  } catch (error) {
-    console.error('Failed to process embedding queue ❌:', error);
-    return null;
-  }
-}
-
 async function processBrandsInBatches(brands) {
   const results = {
     successCount: 0,
@@ -129,16 +79,18 @@ async function processBrandsInBatches(brands) {
     console.log(`\nProcessing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(brands.length/BATCH_SIZE)}`);
     
     for (const brand of batch) {
-      const success = await updateBrandEmbedding(brand.id);
-      if (success) {
-        results.successCount++;
-      } else {
-        console.log(`Waiting ${DELAY_BETWEEN_BRANDS/1000}s after failure...`);
-        await sleep(DELAY_BETWEEN_BRANDS);
+      try {
+        const success = await updateBrandEmbedding(brand.id);
+        if (success) {
+          results.successCount++;
+          console.log(`✅ Successfully updated embedding for brand ${brand.id}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to update embedding for brand ${brand.id}:`, error);
         results.failureCount++;
       }
       
-      // Add longer delay between brands
+      // Add delay between brands
       console.log(`Waiting ${DELAY_BETWEEN_BRANDS/1000}s before next brand...`);
       await sleep(DELAY_BETWEEN_BRANDS);
     }
@@ -159,7 +111,7 @@ async function main() {
     const { data: brands, error } = await supabase
       .from('brands')
       .select('id, name')
-      .eq('id', 8);
+      .is('embedding', null);
 
     if (error) {
       console.error('Error fetching brands:', error);
@@ -175,23 +127,11 @@ async function main() {
     console.log('Starting updates in batches...\n');
     
     const results = await processBrandsInBatches(brands);
-    
-    // Add delay before processing queue
-    console.log('\nWaiting 15s before processing queue...');
-    await sleep(15000);
-
-    // Process the queue
-    console.log('\nProcessing embedding queue...');
-    await processEmbeddingQueue();
-
-    // Final delay to ensure all operations complete
-    console.log('\nWaiting 15s for final operations...');
-    await sleep(15000);
 
     console.log('\n=== Update Complete ===');
     console.log(`Total brands processed: ${brands.length}`);
-    console.log(`✅ Successfully queued: ${results.successCount} brands`);
-    console.log(`❌ Failed to queue: ${results.failureCount}`);
+    console.log(`✅ Successfully updated: ${results.successCount} brands`);
+    console.log(`❌ Failed to update: ${results.failureCount} brands`);
 
     // Exit successfully
     process.exit(0);
