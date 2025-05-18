@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
 import { supabase } from '../lib/supabase';
+
+const ANALYSIS_TIMEOUT = 45000; // 45 seconds
+const EMBEDDING_TIMEOUT = 30000; // 30 seconds
 
 interface CandidateBrand {
   name: string;
@@ -25,6 +28,14 @@ export function AgentBossControlCenter() {
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [timeouts, setTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
+    };
+  }, [timeouts]);
 
   // Set up Realtime subscription for brand updates
   useEffect(() => {
@@ -91,12 +102,28 @@ export function AgentBossControlCenter() {
     }
   };
 
+  const handleTimeout = (index: number, type: 'analysis' | 'embedding') => {
+    setCandidates(prev => prev.map((c, i) => 
+      i === index ? {
+        ...c,
+        isProcessing: false,
+        error: type === 'analysis' 
+          ? 'Analysis timed out. The brand was added but analysis is still pending.'
+          : 'Embedding generation timed out. The brand was added but semantic search may be limited.'
+      } : c
+    ));
+  };
+
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
       i === index ? { ...c, isProcessing: true, error: null, isAdded: false } : c
     ));
     setProcessingError(null);
+    
+    // Set analysis timeout
+    const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
+    setTimeouts(prev => ({ ...prev, [`analysis-${index}`]: analysisTimeout }));
 
     try {
       // Get the next ID from the brands_id_seq sequence
@@ -138,6 +165,13 @@ export function AgentBossControlCenter() {
       // Store the brand ID for embedding updates
       const brandId = newBrand[0].id;
 
+      // Clear analysis timeout since brand was added successfully
+      clearTimeout(timeouts[`analysis-${index}`]);
+      setTimeouts(prev => {
+        const { [`analysis-${index}`]: _, ...rest } = prev;
+        return rest;
+      });
+
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
         i === index ? {
@@ -178,6 +212,10 @@ export function AgentBossControlCenter() {
       }
     } catch (err: any) {
       console.error('Error adding brand:', err);
+      
+      // Clear analysis timeout
+      clearTimeout(timeouts[`analysis-${index}`]);
+      
       setProcessingError(err.message || 'Failed to process brand');
       
       // Update candidate status to error
@@ -195,11 +233,25 @@ export function AgentBossControlCenter() {
     setCandidates(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleEmbeddingTimeout = (index: number) => {
+    setCandidates(prev => prev.map((c, i) => 
+      i === index ? {
+        ...c,
+        isUpdatingEmbedding: false,
+        embeddingError: 'Embedding generation timed out. Semantic search may be limited.'
+      } : c
+    ));
+  };
+
   const handleUpdateEmbeddings = async (brandId: number, index: number) => {
     // Update candidate status
     setCandidates(prev => prev.map((c, i) => 
       i === index ? { ...c, isUpdatingEmbedding: true, embeddingError: null } : c
     ));
+
+    // Set embedding timeout
+    const embeddingTimeout = setTimeout(() => handleEmbeddingTimeout(index), EMBEDDING_TIMEOUT);
+    setTimeouts(prev => ({ ...prev, [`embedding-${index}`]: embeddingTimeout }));
 
     try {
       const response = await fetch(
@@ -223,8 +275,19 @@ export function AgentBossControlCenter() {
       if (!data.success) {
         throw new Error(data.error || 'Failed to queue embedding');
       }
+
+      // Clear embedding timeout on success
+      clearTimeout(timeouts[`embedding-${index}`]);
+      setTimeouts(prev => {
+        const { [`embedding-${index}`]: _, ...rest } = prev;
+        return rest;
+      });
     } catch (err: any) {
       console.error('Error updating embeddings:', err);
+      
+      // Clear embedding timeout
+      clearTimeout(timeouts[`embedding-${index}`]);
+      
       setCandidates(prev => prev.map((c, i) => 
         i === index ? { ...c, embeddingError: err.message } : c
       ));
@@ -358,7 +421,11 @@ export function AgentBossControlCenter() {
                                   {candidate.isProcessing ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                   ) : (
-                                    <CheckCircle className="w-4 h-4" />
+                                    candidate.error ? (
+                                      <Clock className="w-4 h-4" />
+                                    ) : (
+                                      <CheckCircle className="w-4 h-4" />
+                                    )
                                   )}
                                   {candidate.isProcessing ? 'Adding...' : 'Add & Analyze'}
                                 </Button>
@@ -372,7 +439,16 @@ export function AgentBossControlCenter() {
                               </>
                             ) : (
                               <span className="text-sm text-green-400">
-                                {candidate.isUpdatingEmbedding ? 'Updating Embedding...' : 'Added - Pending Approval'}
+                                {candidate.isUpdatingEmbedding ? (
+                                  <span className="flex items-center gap-1">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Updating Embedding...
+                                  </span>
+                                ) : candidate.embeddingError ? (
+                                  'Added with Limited Search'
+                                ) : (
+                                  'Added - Pending Approval'
+                                )}
                               </span>
                             )}
                           </div>
