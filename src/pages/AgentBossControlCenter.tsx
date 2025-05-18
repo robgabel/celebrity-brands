@@ -10,9 +10,12 @@ interface CandidateBrand {
   name: string;
   creators: string;
   description: string;
+  id?: number;
   isProcessing?: boolean;
   isAdded?: boolean;
   error?: string;
+  isUpdatingEmbedding?: boolean;
+  embeddingError?: string;
 }
 
 export function AgentBossControlCenter() {
@@ -20,8 +23,6 @@ export function AgentBossControlCenter() {
   const [petraStatus, setPetraStatus] = useState<'ready' | 'executing' | 'error'>('ready');
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
-  const [isUpdatingEmbeddings, setIsUpdatingEmbeddings] = useState(false);
-  const [embeddingError, setEmbeddingError] = useState<string | null>(null);
 
   const handleLaunchPetra = async () => {
     if (!instructions.trim()) return;
@@ -102,6 +103,11 @@ export function AgentBossControlCenter() {
       if (insertError) throw insertError;
       if (!newBrand) throw new Error('Failed to create brand');
 
+      // Update candidate with brand ID
+      setCandidates(prev => prev.map((c, i) => 
+        i === index ? { ...c, id: newBrand.id } : c
+      ));
+
       // Now call analyze-brands function with the new brand ID
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-brands`,
@@ -143,8 +149,10 @@ export function AgentBossControlCenter() {
   };
 
   const handleUpdateEmbeddings = async (brandId: number) => {
-    setIsUpdatingEmbeddings(true);
-    setEmbeddingError(null);
+    // Update candidate status
+    setCandidates(prev => prev.map((c, i) => 
+      i === index ? { ...c, isUpdatingEmbedding: true, embeddingError: null } : c
+    ));
 
     try {
       const response = await fetch(
@@ -170,9 +178,13 @@ export function AgentBossControlCenter() {
       }
     } catch (err: any) {
       console.error('Error updating embeddings:', err);
-      setEmbeddingError(err.message);
+      setCandidates(prev => prev.map((c, i) => 
+        i === index ? { ...c, embeddingError: err.message } : c
+      ));
     } finally {
-      setIsUpdatingEmbeddings(false);
+      setCandidates(prev => prev.map((c, i) => 
+        i === index ? { ...c, isUpdatingEmbedding: false } : c
+      ));
     }
   };
 
@@ -275,16 +287,21 @@ export function AgentBossControlCenter() {
                                 {candidate.error}
                               </p>
                             )}
+                            {candidate.embeddingError && (
+                              <p className="text-sm text-red-400 mt-2">
+                                {candidate.embeddingError}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             {!candidate.isAdded && (
                               <>
                                 <Button
-                                  onClick={() => handleUpdateEmbeddings(brand.id)}
-                                  disabled={isUpdatingEmbeddings}
+                                  onClick={() => candidate.id && handleUpdateEmbeddings(candidate.id, index)}
+                                  disabled={!candidate.id || candidate.isUpdatingEmbedding}
                                   className="text-xs px-2 py-1"
                                 >
-                                  {isUpdatingEmbeddings ? 'Updating...' : 'Update Embedding'}
+                                  {candidate.isUpdatingEmbedding ? 'Updating...' : 'Update Embedding'}
                                 </Button>
                                 <Button
                                   onClick={() => handleAddBrand(candidate, index)}
