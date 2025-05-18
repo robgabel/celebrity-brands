@@ -115,7 +115,7 @@ export function GlobalNav({
   };
 
   return (
-    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50 relative z-[200]">
+    <header className="bg-gradient-to-b from-gray-900 via-gray-800/90 to-gray-900 backdrop-blur-sm text-gray-200 py-4 px-4 md:px-6 border-b border-gray-800/50 relative z-50">
       {isAdmin && <AdminRibbon />}
       <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center gap-8">
@@ -136,7 +136,7 @@ export function GlobalNav({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative search-container">
+          <div className="relative search-container z-50">
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
@@ -147,7 +147,7 @@ export function GlobalNav({
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                className="w-56 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
+                className="w-64 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
               {searchQuery && (
@@ -165,7 +165,7 @@ export function GlobalNav({
             </form>
 
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-12 left-0 w-full bg-gray-800 rounded-lg border border-gray-700 shadow-xl overflow-hidden z-50">
+              <div className="absolute top-full left-0 w-full mt-2 bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl overflow-hidden">
                 {isLoadingSuggestions ? (
                   <div className="p-4 text-center text-gray-400">
                     Loading suggestions...
@@ -181,11 +181,11 @@ export function GlobalNav({
                             setShowSuggestions(false);
                             navigateToSearch(suggestion.text, suggestion.type === 'category' ? 'category' : undefined);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-700/50 flex items-start gap-3"
+                          className="w-full text-left px-4 py-3 hover:bg-gray-700/50 transition-colors duration-150 flex items-start gap-3"
                         >
                           <Search className="w-5 h-5 text-gray-400 mt-0.5" />
                           <div>
-                            <div className="text-gray-200">{suggestion.text}</div>
+                            <div className="text-gray-200 font-medium">{suggestion.text}</div>
                             {suggestion.subtext && (
                               <div className="text-sm text-gray-400">
                                 {suggestion.subtext}
