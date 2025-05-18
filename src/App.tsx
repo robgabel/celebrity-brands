@@ -4,12 +4,19 @@ import { ExplorePage } from './pages/Explore';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { Profile } from './pages/Profile';
+import { useAuthStore } from './stores/authStore';
 import { BrandDetails } from './pages/BrandDetails';
 import { AuthGuard } from './components/AuthGuard';
 import { AdminGuard } from './components/AdminGuard';
 import { AgentBossControlCenter } from './pages/AgentBossControlCenter';
 
 function App() {
+  const initialize = useAuthStore(state => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <Router>
       <Routes>
@@ -39,5 +46,4 @@ function App() {
     </Router>
   );
 }
-
-export default App;
+import { useEffect } from 'react';

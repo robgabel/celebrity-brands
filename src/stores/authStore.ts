@@ -14,7 +14,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isAdmin: false,
   profile: null,
 
-  initialize: async () => {
+  initialize: async () => {    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -30,6 +30,29 @@ export const useAuthStore = create<AuthStore>((set) => ({
           isAdmin: profile?.is_admin || false,
           profile: profile || null
         });
+
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' && session?.user) {
+            const { data: updatedProfile } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('auth_id', session.user.id)
+              .single();
+
+            set({
+              isAuthenticated: true,
+              isAdmin: updatedProfile?.is_admin || false,
+              profile: updatedProfile || null
+            });
+          } else if (event === 'SIGNED_OUT') {
+            set({ isAuthenticated: false, isAdmin: false, profile: null });
+          }
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
       }
     } catch (error) {
       console.error('Error initializing auth store:', error);
