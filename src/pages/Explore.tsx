@@ -209,49 +209,22 @@ export function ExplorePage() {
   async function fetchBrands() {
     try {
       setLoading(true);
+      let query = supabase
+        .from('brands')
+        .select('*', { count: 'exact' });
       
-      // Handle semantic search
-      if (semanticQuery) {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query: semanticQuery })
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `Failed to search: ${response.status}`);
-        }
-
-        const matches = await response.json();
-        setBrands(matches || []);
-        setTotalItems(matches?.length || 0);
-        return;
-      }
-      
-      let query = supabase.from('brands')
-        .select(`
-          *,
-          brand_rankings (
-            ranking_score,
-            rank,
-            trend_pct
-          )
-        `, { count: 'exact' });
-
       // Non-admin users can only see approved brands
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
       }
 
       if (debouncedSearchQuery) {
-        query = query.or(`name.ilike.%${debouncedSearchQuery}%,creators.ilike.%${debouncedSearchQuery}%`);
+        // Use more efficient pattern matching
+        const searchPattern = `%${debouncedSearchQuery.toLowerCase()}%`;
+        query = query.or(
+          `lower(name).like.${searchPattern},` +
+          `lower(creators).like.${searchPattern}`
+        );
       }
 
       if (categoryFilter !== 'All Categories') {
@@ -279,30 +252,20 @@ export function ExplorePage() {
       const selectedSort = sortOptions.find(option => option.value === sortBy) || sortOptions[0];
       query = query.order(selectedSort.field, { ascending: selectedSort.ascending });
 
-      const { count, error: countError } = await query;
-      
-      if (countError) throw countError;
-      
-      setTotalItems(count || 0);
-
-      const maxPages = Math.ceil((count || 0) / itemsPerPage);
-      if (currentPage > maxPages && maxPages > 0) {
-        setCurrentPage(maxPages);
-        return;
-      }
-
+      // Execute query with pagination
       const start = (currentPage - 1) * itemsPerPage;
-      const end = Math.min(start + itemsPerPage - 1, (count || 0) - 1);
+      const end = start + itemsPerPage - 1;
       
-      if (start <= end) {
-        const { data, error } = await query
-          .range(start, end);
-        
-        if (error) throw error;
-        setBrands(data || []);
-      } else {
-        setBrands([]);
+      const { data, error, count } = await query
+        .range(start, end)
+        .throwOnError();
+
+      if (error) {
+        throw error;
       }
+
+      setBrands(data || []);
+      setTotalItems(count || 0);
     } catch (error) {
       console.error('Error fetching brands:', error);
     } finally {
