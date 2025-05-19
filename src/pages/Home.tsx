@@ -24,6 +24,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [totalBrands, setTotalBrands] = useState<number>(0);
 
   useEffect(() => {
     checkAuth();
@@ -31,6 +32,14 @@ export function HomePage() {
       try {
         setLoading(true);
         setError(null);
+        
+        // Get total count of approved brands
+        const { count: brandsCount } = await supabase
+          .from('brands')
+          .select('*', { count: 'exact', head: true })
+          .eq('approval_status', 'approved');
+        
+        setTotalBrands(brandsCount || 0);
         
         // Fetch featured brands (currently just getting popular ones)
         const { data: featuredData, error: featuredError } = await supabase
@@ -132,7 +141,8 @@ export function HomePage() {
         {/* Hero Section */}
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
-            Discover and Follow<br />
+            Discover and Track<br />
+            {totalBrands.toLocaleString()}<br />
             Celebrity-Owned Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
