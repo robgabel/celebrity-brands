@@ -7,6 +7,6 @@ export function isWithinDays(date: string | null, days: number): boolean {
   return diffDays <= days;
 }
 
-export function formatDate(date: string): string {
+function formatDate(date: string): string {
   return new Date(date).toLocaleDateString();
 }

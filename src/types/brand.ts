@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const brandSchema = z.object({
+const brandSchema = z.object({
   id: z.number(),
   name: z.string(),
   creators: z.string(),
@@ -20,7 +20,7 @@ export const brandSchema = z.object({
 
 export type Brand = z.infer<typeof brandSchema>;
 
-export interface BrandFilters {
+interface BrandFilters {
   search?: string;
   category?: string;
   founderType?: string;
@@ -29,7 +29,7 @@ export interface BrandFilters {
   showFavoritesOnly?: boolean;
 }
 
-export interface BrandPagination {
+interface BrandPagination {
   page: number;
   limit: number;
   total: number;

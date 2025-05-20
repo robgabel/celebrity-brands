@@ -34,7 +34,7 @@ let authSubscription: { data: { subscription: { unsubscribe: () => void } } } | 
 let realtimeChannels: Map<string, RealtimeChannel> = new Map();
 
 // Initialize auth state
-export const initializeAuth = async () => {
+const initializeAuth = async () => {
   try {
     // Get the current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -70,7 +70,7 @@ export const initializeAuth = async () => {
 };
 
 // Helper function to handle Supabase errors
-export const handleSupabaseError = (error: any): never => {
+const handleSupabaseError = (error: any): never => {
   console.error('Supabase error:', error);
 
   if (error.message === 'Failed to fetch') {
@@ -90,7 +90,7 @@ export const handleSupabaseError = (error: any): never => {
 };
 
 // Cleanup function for realtime subscriptions
-export const cleanupRealtimeSubscriptions = () => {
+const cleanupRealtimeSubscriptions = () => {
   realtimeChannels.forEach(channel => {
     channel.unsubscribe();
   });
