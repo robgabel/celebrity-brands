@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import wiki from 'npm:wikipedia@2.1.2';
+import wiki from 'npm:wikijs@6.4.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,23 +36,25 @@ serve(async (req) => {
     if (!brand) throw new Error('Brand not found');
 
     // Search Wikipedia for the brand
-    await wiki.setLang('en');
-    const searchResults = await wiki.search(`${brand.name} ${brand.creators}`);
+    const wikiClient = wiki({ apiUrl: 'https://en.wikipedia.org/w/api.php' });
+    const searchResults = await wikiClient.search(`${brand.name} ${brand.creators}`, 2);
 
     let wikipediaUrl = null;
-    if (searchResults.results?.length > 0) {
+    if (searchResults.length > 0) {
       // Get the first result's full page
       try {
-        const page = await wiki.page(searchResults.results[0].title);
-        const summary = await page.summary();
-        wikipediaUrl = summary.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(searchResults.results[0].title)}`;
+        const page = await wikiClient.page(searchResults[0]);
+        wikipediaUrl = await page.url();
       } catch (pageError) {
         console.error('Error getting page:', pageError);
         // Try next result if first fails
-        if (searchResults.results.length > 1) {
-          const page = await wiki.page(searchResults.results[1].title);
-          const summary = await page.summary();
-          wikipediaUrl = summary.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(searchResults.results[1].title)}`;
+        if (searchResults.length > 1) {
+          try {
+            const page = await wikiClient.page(searchResults[1]);
+            wikipediaUrl = await page.url();
+          } catch (fallbackError) {
+            console.error('Error getting fallback page:', fallbackError);
+          }
         }
       }
     }

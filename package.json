@@ -13,7 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
     "lucide-react": "^0.358.0",
-    "wikipedia": "^2.1.2",
+    "wikijs": "^6.4.1",
     "dotenv": "^16.4.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
