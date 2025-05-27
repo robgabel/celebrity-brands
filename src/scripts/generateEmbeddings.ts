@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { setTimeout } from 'timers/promises';
 
 // Load environment variables
 dotenv.config();
@@ -47,7 +48,7 @@ async function generateEmbeddingWithRetry(brandId: number, maxRetries = 3): Prom
 
       const delay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10 second delay
       console.log(`Attempt ${attempt} failed for brand ${brandId}. Retrying in ${delay/1000} seconds...`);
-      await setTimeout(delay);
+      await setTimeout(delay); // Using timers/promises setTimeout
     }
   }
 }
@@ -80,7 +81,7 @@ async function generateEmbeddings() {
         successCount++;
 
         // Add a small delay to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 200)); // Use standard setTimeout
+        await setTimeout(200); // Using timers/promises setTimeout
       } catch (err) {
         console.error(`Failed to generate embedding for brand ${brand.id}:`, err.message);
         failureCount++;
