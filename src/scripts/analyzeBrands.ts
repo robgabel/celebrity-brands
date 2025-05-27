@@ -28,7 +28,7 @@ async function analyzeBrands() {
     }
 
     if (!brands || brands.length === 0) {
-      console.log('No brands found with NULL logo_url.');
+      console.log('No brands found with NULL wikipedia_url.');
       return;
     }
 
@@ -76,7 +76,7 @@ async function analyzeBrands() {
         // Check if the analysis actually updated the logo_url
         const { data: updatedBrand, error: checkError } = await supabase
           .from('brands')
-          .select('logo_url')
+          .select('wikipedia_url')
           .eq('id', brand.id)
           .single();
 
