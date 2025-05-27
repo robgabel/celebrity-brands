@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ChevronLeft, Globe, Calendar, Building2, Package, AlertCircle, Newspaper, BookOpen, BookOpenCheck } from 'lucide-react';
+import { ChevronLeft, Globe, Calendar, Building2, Package, AlertCircle, Newspaper, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { getCategoryColor } from '../lib/categoryUtils';
@@ -549,23 +549,6 @@ export function BrandDetails() {
                     {brand.type_of_influencer}
                   </dd>
                 </div>
-
-                {brand.wikipedia_url && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-400">Wikipedia</dt>
-                    <dd className="mt-1">
-                      <a
-                        href={brand.wikipedia_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center text-sm text-teal-400 hover:text-teal-300"
-                      >
-                        <BookOpenCheck className="w-4 h-4 mr-1" />
-                        View on Wikipedia
-                      </a>
-                    </dd>
-                  </div>
-                )}
 
                 {brand.homepage_url && (
                   <div>

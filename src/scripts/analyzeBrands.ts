@@ -16,19 +16,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function analyzeBrands() {
   try {
-    console.log('Fetching brands with NULL wikipedia_url...');
+    console.log('Fetching brands with NULL product_category...');
     
     const { data: brands, error: fetchError } = await supabase
       .from('brands')
       .select('id, name')
-      .is('wikipedia_url', null);
+      .is('product_category', null);
 
     if (fetchError) {
       throw new Error(`Failed to fetch brands: ${fetchError.message}`);
     }
 
     if (!brands || brands.length === 0) {
-      console.log('No brands found with NULL wikipedia_url.');
+      console.log('No brands found with NULL product_category.');
       return;
     }
 
@@ -73,17 +73,17 @@ async function analyzeBrands() {
         console.log(`Successfully analyzed brand ${brand.id}:`, result);
         successCount++;
 
-        // Check if the analysis actually updated the logo_url
+        // Check if the analysis actually updated the product_category
         const { data: updatedBrand, error: checkError } = await supabase
           .from('brands')
-          .select('wikipedia_url')
+          .select('product_category')
           .eq('id', brand.id)
           .single();
 
         if (checkError) {
           console.warn(`Warning: Could not verify update for brand ${brand.id}:`, checkError);
-        } else if (!updatedBrand.wikipedia_url) {
-          console.warn(`Warning: Brand ${brand.id} was processed but wikipedia_url is still NULL`);
+        } else if (!updatedBrand.product_category) {
+          console.warn(`Warning: Brand ${brand.id} was processed but product_category is still NULL`);
         }
       } catch (error) {
         console.error(`Failed to analyze brand ${brand.id}:`, error);

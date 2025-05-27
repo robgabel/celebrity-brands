@@ -12,7 +12,6 @@ const brandSchema = z.object({
   type_of_influencer: z.string(),
   logo_url: z.string().url().nullable(),
   homepage_url: z.string().url().nullable(),
-  wikipedia_url: z.string().url().nullable(),
   social_links: z.record(z.string(), z.string().url()).nullable(),
   approval_status: z.enum(['pending', 'approved', 'rejected']),
   created_at: z.string().datetime(),
