@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import wikipedia from 'npm:node-wikipedia@0.0.9';
+import wiki from 'npm:wikipedia@2.1.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,14 +36,15 @@ serve(async (req) => {
     if (!brand) throw new Error('Brand not found');
 
     // Search Wikipedia for the brand
-    const searchQuery = `${brand.name} ${brand.creators} brand`;
-    const searchResults = await wikipedia.search(searchQuery);
+    await wiki.setLang('en');
+    const searchResults = await wiki.search(`${brand.name} ${brand.creators} brand`);
 
     let wikipediaUrl = null;
     if (searchResults.results?.length > 0) {
       // Get the first result's full page
-      const page = await wikipedia.page(searchResults.results[0].title);
-      wikipediaUrl = page.url;
+      const page = await wiki.page(searchResults.results[0].title);
+      const summary = await page.summary();
+      wikipediaUrl = summary.content_urls?.desktop?.page;
     }
 
     // Update the brand with Wikipedia URL
