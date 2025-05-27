@@ -220,17 +220,16 @@ export function AgentBossControlCenter() {
       const nextId = seqData;
 
       // First check if brand exists
-      const { data: existingBrand, error: checkError } = await supabase
+      const { data: existingBrands, error: checkError } = await supabase
         .from('brands')
         .select('id')
-        .eq('id', nextId)
-        .single();
+        .eq('id', nextId);
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+      if (checkError) {
         throw checkError;
       }
 
-      if (existingBrand) {
+      if (existingBrands && existingBrands.length > 0) {
         throw new Error('Brand ID conflict detected. Please try again.');
       }
 
@@ -262,19 +261,27 @@ export function AgentBossControlCenter() {
       // Queue the brand for analysis
       const queueResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-analysis`,
-        {
+        { 
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ brandId })
+          body: JSON.stringify({ brandId }),
+          // Add timeout to prevent hanging requests
+          signal: AbortSignal.timeout(30000)
         }
       );
 
       if (!queueResponse.ok) {
-        const error = await queueResponse.json();
-        throw new Error(error.error || `Failed to queue brand: ${queueResponse.status}`);
+        let errorMessage;
+        try {
+          const error = await queueResponse.json();
+          errorMessage = error.error;
+        } catch (e) {
+          errorMessage = `Failed to queue brand (Status: ${queueResponse.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       // Update candidate status to added
