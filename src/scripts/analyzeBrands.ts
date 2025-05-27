@@ -16,12 +16,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function analyzeBrands() {
   try {
-    console.log('Fetching brands with NULL logo_url...');
+    console.log('Fetching brands with NULL wikipedia_url...');
     
     const { data: brands, error: fetchError } = await supabase
       .from('brands')
       .select('id, name')
-      .is('logo_url', null);
+      .is('wikipedia_url', null);
 
     if (fetchError) {
       throw new Error(`Failed to fetch brands: ${fetchError.message}`);
@@ -82,8 +82,8 @@ async function analyzeBrands() {
 
         if (checkError) {
           console.warn(`Warning: Could not verify update for brand ${brand.id}:`, checkError);
-        } else if (!updatedBrand.logo_url) {
-          console.warn(`Warning: Brand ${brand.id} was processed but logo_url is still NULL`);
+        } else if (!updatedBrand.wikipedia_url) {
+          console.warn(`Warning: Brand ${brand.id} was processed but wikipedia_url is still NULL`);
         }
       } catch (error) {
         console.error(`Failed to analyze brand ${brand.id}:`, error);
