@@ -12,17 +12,39 @@ interface NewsFeedbackProps {
 export function NewsFeedback({ brandId, articleUrl, onFeedbackSubmit }: NewsFeedbackProps) {
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [isAccurate, setIsAccurate] = useState<boolean | null>(null);
+  const [existingFeedback, setExistingFeedback] = useState<{ is_accurate: boolean } | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Check authentication status
   useState(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
+      setUserId(user?.id || null);
+      if (user) {
+        checkExistingFeedback(user.id);
+      }
     });
   });
+
+  const checkExistingFeedback = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('news_feedback')
+        .select('is_accurate')
+        .eq('user_id', uid)
+        .eq('news_article_url', articleUrl)
+        .maybeSingle();
+
+      if (error) throw error;
+      setExistingFeedback(data);
+    } catch (err) {
+      console.error('Error checking feedback:', err);
+    }
+  };
 
   const handleFeedback = async (accurate: boolean) => {
     if (!isAuthenticated) {
@@ -40,23 +62,25 @@ export function NewsFeedback({ brandId, articleUrl, onFeedbackSubmit }: NewsFeed
     setError('');
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
 
       const { error: submitError } = await supabase
         .from('news_feedback')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           brand_id: brandId,
           news_article_url: articleUrl,
           is_accurate: isAccurate,
           feedback_text: feedbackText.trim() || null
-        });
+        })
+        .select()
+        .single();
 
       if (submitError) throw submitError;
 
       setShowFeedbackDialog(false);
       setFeedbackText('');
+      setExistingFeedback({ is_accurate: isAccurate! });
       onFeedbackSubmit?.();
     } catch (err: any) {
       setError(err.message);
@@ -69,7 +93,11 @@ export function NewsFeedback({ brandId, articleUrl, onFeedbackSubmit }: NewsFeed
     <div className="relative">
       <div className="flex items-center gap-2">
         <button
-          className="p-1 text-gray-400 hover:text-green-400 transition-colors cursor-pointer"
+          className={`p-1 transition-colors cursor-pointer ${
+            existingFeedback?.is_accurate === true 
+              ? 'text-green-400' 
+              : 'text-gray-400 hover:text-green-400'
+          }`}
           title="Accurate article"
           onClick={(e) => {
             e.preventDefault();
@@ -80,7 +108,11 @@ export function NewsFeedback({ brandId, articleUrl, onFeedbackSubmit }: NewsFeed
           <ThumbsUp className="w-4 h-4" />
         </button>
         <button
-          className="p-1 text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+          className={`p-1 transition-colors cursor-pointer ${
+            existingFeedback?.is_accurate === false
+              ? 'text-red-400'
+              : 'text-gray-400 hover:text-red-400'
+          }`}
           title="Inaccurate article"
           onClick={(e) => {
             e.preventDefault();
