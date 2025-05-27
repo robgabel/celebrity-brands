@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { setTimeout } from 'timers/promises';
 
 // Load environment variables
 dotenv.config();
@@ -81,7 +80,7 @@ async function generateEmbeddings() {
         successCount++;
 
         // Add a small delay to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 200)); // Use standard setTimeout
       } catch (err) {
         console.error(`Failed to generate embedding for brand ${brand.id}:`, err.message);
         failureCount++;
