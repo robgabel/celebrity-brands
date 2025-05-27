@@ -70,15 +70,25 @@ export function NewsFeedback({ brandId, articleUrl, onFeedbackSubmit }: NewsFeed
       <div className="flex items-center gap-2">
         <button
           onClick={() => handleFeedback(true)}
-          className="p-1 text-gray-400 hover:text-green-400 transition-colors"
+          className="p-1 text-gray-400 hover:text-green-400 transition-colors cursor-pointer"
           title="Accurate article"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFeedback(true);
+          }}
         >
           <ThumbsUp className="w-4 h-4" />
         </button>
         <button
           onClick={() => handleFeedback(false)}
-          className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+          className="p-1 text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
           title="Inaccurate article"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFeedback(false);
+          }}
         >
           <ThumbsDown className="w-4 h-4" />
         </button>
