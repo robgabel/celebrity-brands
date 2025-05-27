@@ -7,7 +7,6 @@ import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
 import { supabase } from '../lib/supabase';
 
-const ANALYSIS_TIMEOUT = 45000; // 45 seconds
 const EMBEDDING_TIMEOUT = 30000; // 30 seconds
 
 interface CandidateBrand {
@@ -29,70 +28,9 @@ export function AgentBossControlCenter() {
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [timeouts, setTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
-  const [analysisStatus, setAnalysisStatus] = useState<{ [key: number]: string }>({});
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
-  const [analysisTimeouts, setAnalysisTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
   const [queueError, setQueueError] = useState<string | null>(null);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    const cleanup = () => {
-      Object.values(analysisTimeouts).forEach(timeout => clearTimeout(timeout));
-    }
-    return cleanup;
-  }, [analysisTimeouts]);
-
-  // Poll for analysis status updates
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      const pendingBrands = candidates.filter(c => c.isProcessing || c.isUpdatingEmbedding);
-      
-      if (pendingBrands.length === 0) {
-        return;
-      }
-
-      try {
-        const { data: statusData, error: statusError } = await supabase
-          .from('brand_analysis_status')
-          .select('brand_id, status, error')
-          .in('brand_id', pendingBrands.map(b => b.id!))
-          .in('status', ['pending', 'processing', 'error', 'timeout']);
-
-        if (statusError) throw statusError;
-
-        if (statusData) {
-          statusData.forEach(status => {
-            const brandId = status.brand_id;
-            if (status.status === 'completed') {
-              // Clear timeouts for completed analysis
-              if (analysisTimeouts[brandId]) {
-                clearTimeout(analysisTimeouts[brandId]);
-                setAnalysisTimeouts(prev => {
-                  const { [brandId]: _, ...rest } = prev;
-                  return rest;
-                });
-              }
-            } else if (status.status === 'error' || status.status === 'timeout') {
-              setCandidates(prev => prev.map(c => 
-                c.id === brandId
-                  ? { 
-                    ...c, 
-                    error: status.error || `Analysis ${status.status}. The brand was added but analysis is incomplete.`,
-                    isProcessing: false 
-                  }
-                  : c
-              ));
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Error polling analysis status:', err);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [candidates]);
 
   // Set up Realtime subscription for brand updates
   useEffect(() => {
@@ -176,27 +114,9 @@ export function AgentBossControlCenter() {
       i === index ? {
         ...c,
         isProcessing: false,
-        error: type === 'analysis' 
-          ? 'Analysis timed out. The brand was added but analysis is still pending.'
-          : 'Embedding generation timed out. The brand was added but semantic search may be limited.'
+        error: 'Embedding generation timed out. The brand was added but semantic search may be limited.'
       } : c
     ));
-  };
-
-  const checkAnalysisStatus = async (brandId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('brand_analysis_status')
-        .select('status, error')
-        .eq('brand_id', brandId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error checking analysis status:', err);
-      return null;
-    }
   };
 
   const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
@@ -262,15 +182,11 @@ export function AgentBossControlCenter() {
       setCandidates(prev => prev.map((c, i) =>
         i === index ? {
           ...c,
-          isProcessing: true,
+          isProcessing: false,
           isAdded: true,
           id: brandId
         } : c
       ));
-
-      // Set analysis timeout
-      const analysisTimeout = setTimeout(() => handleTimeout(index, 'analysis'), ANALYSIS_TIMEOUT);
-      setAnalysisTimeouts(prev => ({ ...prev, [index]: analysisTimeout }));
     } catch (err: any) {
       console.error('Error adding brand:', err);
       
@@ -573,7 +489,7 @@ export function AgentBossControlCenter() {
                                     <CheckCircle className="w-4 h-4" />
                                   )}
                                   {candidate.isProcessing ? (
-                                    'Adding...'
+                                    'Processing...'
                                   ) : (
                                     'Add Brand'
                                   )}
