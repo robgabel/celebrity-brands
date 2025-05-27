@@ -256,33 +256,7 @@ export function AgentBossControlCenter() {
       if (!newBrand) throw new Error('Failed to create brand');
 
       // Store the brand ID for embedding updates
-      const brandId = newBrand.id;
-      
-      // Queue the brand for analysis
-      const queueResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-analysis`,
-        { 
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ brandId }),
-          // Add timeout to prevent hanging requests
-          signal: AbortSignal.timeout(30000)
-        }
-      );
-
-      if (!queueResponse.ok) {
-        let errorMessage;
-        try {
-          const error = await queueResponse.json();
-          errorMessage = error.error;
-        } catch (e) {
-          errorMessage = `Failed to queue brand (Status: ${queueResponse.status})`;
-        }
-        throw new Error(errorMessage);
-      }
+      const brandId = newBrand.id; 
 
       // Update candidate status to added
       setCandidates(prev => prev.map((c, i) =>
@@ -599,7 +573,7 @@ export function AgentBossControlCenter() {
                                     <CheckCircle className="w-4 h-4" />
                                   )}
                                   {candidate.isProcessing ? (
-                                    candidate.isAdded ? 'Analyzing...' : 'Adding...'
+                                    'Adding...'
                                   ) : (
                                     'Add Brand'
                                   )}
@@ -622,7 +596,7 @@ export function AgentBossControlCenter() {
                                 ) : candidate.embeddingError ? (
                                   'Added with Limited Search'
                                 ) : (
-                                  'Added - Pending Approval'
+                                  'Added Successfully'
                                 )}
                               </span>
                             )}
