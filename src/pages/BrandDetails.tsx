@@ -63,7 +63,7 @@ export function BrandDetails() {
     setShowVersionDialog(true);
   };
 
-  const handleGenerateStory = async (version: 'v1' | 'v2') => {
+  const handleGenerateStory = async (version: 'v1' | 'v2', notes?: string) => {
     setShowVersionDialog(false);
     if (!brand) return;
     
@@ -80,7 +80,7 @@ export function BrandDetails() {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ brandId: brand.id })
+          body: JSON.stringify({ brandId: brand.id, notes })
         }
       );
 
