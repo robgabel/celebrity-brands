@@ -66,10 +66,10 @@ export function BrandDetails() {
   const handleGenerateStory = async (version: 'v1' | 'v2', notes?: string) => {
     setShowVersionDialog(false);
     if (!brand) return;
-    
+
     setIsGeneratingStory(true);
     setStoryError(null);
-    
+
     try {
       const endpoint = version === 'v1' ? 'generate-brand-story' : 'generate-brand-story-v2';
       const response = await fetch(
@@ -88,12 +88,17 @@ export function BrandDetails() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to generate brand story');
       }
+        
+      const result = await response.json();
+      if (!result) {
+        throw new Error('Empty response from story generator');
+      }
 
       // Refresh brand data to get the new story
       await fetchBrandDetails();
     } catch (err: any) {
       console.error('Error generating brand story:', err);
-      setStoryError(err.message);
+      setStoryError(err.message || 'Failed to generate brand story');
     } finally {
       setIsGeneratingStory(false);
     }
