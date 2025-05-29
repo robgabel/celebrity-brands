@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -38,10 +39,10 @@ export function StoryVersionDialog({ isOpen, onClose, onSelect }: StoryVersionDi
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Emphasize anything? (optional)
           </label>
-          <textarea
+          <textarea 
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add any specific aspects you'd like the story to emphasize"
+            placeholder=""
             className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24"
           />
         </div>

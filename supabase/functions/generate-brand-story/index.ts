@@ -1,3 +1,5 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
+
 interface RequestData {
   brandId: number;
   notes?: string;
