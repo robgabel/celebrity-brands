@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useState } from 'react';
 
 interface StoryVersionDialogProps {
   isOpen: boolean;
