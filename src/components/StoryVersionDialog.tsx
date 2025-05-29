@@ -41,7 +41,7 @@ export function StoryVersionDialog({ isOpen, onClose, onSelect }: StoryVersionDi
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="E.g., highlight the recent sale of Rhode Skin to ELF for $1 billion and what that means for future celebrity brands"
+            placeholder="Add any specific aspects you'd like the story to emphasize"
             className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24"
           />
         </div>
