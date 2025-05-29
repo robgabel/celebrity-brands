@@ -39,7 +39,9 @@
 @@ -1,4 +1,4 @@
    "key_events": ["event 1", "event 2", ...],
    "metrics": {
-     "key_metric_1": "value",
+     
+}
+)"key_metric_1": "value",
 -    "key_metric_2": "value"
 +    "key_metric_2": "value",
 +    ${notes ? '"focus_area_impact": "analysis of emphasized points",' : ''}
