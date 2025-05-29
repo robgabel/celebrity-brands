@@ -104,7 +104,15 @@ Respond with a JSON object containing:
     }
 
     const completion = await openAIResponse.json();
-    const storyContent = JSON.parse(completion.choices[0].message.content);
+    
+    // Strip markdown code block delimiters before parsing JSON
+    const content = completion.choices[0].message.content
+      .replace(/^```json\n/, '')  // Remove opening ```json
+      .replace(/^```\n/, '')      // Remove opening ``` (if no language specified)
+      .replace(/\n```$/, '')      // Remove closing ```
+      .trim();                    // Remove any extra whitespace
+
+    const storyContent = JSON.parse(content);
 
     // Update brand story in database
     const { error: updateError } = await supabaseClient
