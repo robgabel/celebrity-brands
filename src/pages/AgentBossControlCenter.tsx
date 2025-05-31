@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock, CheckSquare, Square } from 'lucide-react';
 import { GlobalNav } from '../components/GlobalNav';
@@ -27,39 +27,15 @@ export function AgentBossControlCenter() {
   const [petraError, setPetraError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateBrand[]>([]);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [timeouts, setTimeouts] = useState<{ [key: number]: NodeJS.Timeout }>({});
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
 
-  // Set up Realtime subscription for brand updates
-  useEffect(() => {
-    const subscription = supabase
-      .channel('brand-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'brands'
-        },
-        async (payload) => {
-          // Find the candidate that matches this brand
-          const brandId = payload.new.id;
-          const candidateIndex = candidates.findIndex(c => !c.isAdded);
-          
-          if (candidateIndex !== -1) {
-            // Queue embedding update for the new brand
-            await handleUpdateEmbeddings(brandId, candidateIndex);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [candidates]);
+  const updateCandidateStatus = useCallback((index: number, updates: Partial<CandidateBrand>) => {
+    setCandidates(prev => prev.map((c, i) => 
+      i === index ? { ...c, ...updates } : c
+    ));
+  }, []);
 
   const handleLaunchPetra = async () => {
     if (!instructions.trim()) return;
@@ -109,124 +85,7 @@ export function AgentBossControlCenter() {
     }
   };
 
-  const handleTimeout = (index: number, type: 'analysis' | 'embedding') => {
-    setCandidates(prev => prev.map((c, i) => 
-      i === index ? {
-        ...c,
-        isProcessing: false,
-        error: 'Embedding generation timed out. The brand was added but semantic search may be limited.'
-      } : c
-    ));
-  };
-
-  const handleAddBrand = async (candidate: CandidateBrand, index: number) => {
-    // Update candidate status
-    setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isProcessing: true, error: null, queueError: null } : c
-    ));
-    setProcessingError(null);
-    setQueueError(null);
-
-    try {
-      // Get the next ID from the brands_id_seq sequence
-      const { data: seqData, error: seqError } = await supabase
-        .rpc('next_brand_id');
-
-      if (seqError) {
-        throw new Error(`Failed to get next brand ID: ${seqError.message}`);
-      }
-      if (!seqData) throw new Error('Failed to get next brand ID');
-
-      const nextId = seqData;
-
-      // First check if brand exists
-      const { data: existingBrands, error: checkError } = await supabase
-        .from('brands')
-        .select('id')
-        .eq('id', nextId);
-
-      if (checkError) {
-        throw checkError;
-      }
-
-      if (existingBrands && existingBrands.length > 0) {
-        throw new Error('Brand ID conflict detected. Please try again.');
-      }
-
-      // Now insert the brand with the next available ID
-      const { data: newBrand, error: insertError } = await supabase
-        .from('brands')
-        .insert([{
-          id: nextId,
-          name: candidate.name,
-          creators: candidate.creators,
-          description: candidate.description,
-          approval_status: 'approved'
-        }])
-        .select()
-        .single();
-      
-      if (insertError) {
-        if (insertError.code === '23505') { // Unique violation
-          throw new Error('Brand ID conflict detected. Please try again.');
-        }
-        throw insertError;
-      }
-
-      if (!newBrand) throw new Error('Failed to create brand');
-
-      // Store the brand ID for embedding updates
-      const brandId = newBrand.id; 
-
-      // Update candidate status to added
-      setCandidates(prev => prev.map((c, i) =>
-        i === index ? {
-          ...c,
-          isProcessing: false,
-          isAdded: true,
-          id: brandId
-        } : c
-      ));
-    } catch (err: any) {
-      console.error('Error adding brand:', err);
-      
-      setProcessingError(err.message || 'Failed to process brand');
-      
-      // Update candidate status to error
-      setCandidates(prev => prev.map((c, i) => 
-        i === index ? { 
-          ...c, 
-          isProcessing: false, 
-          error: err.message || 'Failed to add brand'
-        } : c
-      ));
-    }
-  };
-
-  const handleRejectCandidate = (index: number) => {
-    setCandidates(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleEmbeddingTimeout = (index: number) => {
-    setCandidates(prev => prev.map((c, i) => 
-      i === index ? {
-        ...c,
-        isUpdatingEmbedding: false,
-        embeddingError: 'Embedding generation timed out. Semantic search may be limited.'
-      } : c
-    ));
-  };
-
-  const handleUpdateEmbeddings = async (brandId: number, index: number) => {
-    // Update candidate status
-    setCandidates(prev => prev.map((c, i) => 
-      i === index ? { ...c, isUpdatingEmbedding: true, embeddingError: null } : c
-    ));
-
-    // Set embedding timeout
-    const embeddingTimeout = setTimeout(() => handleEmbeddingTimeout(index), EMBEDDING_TIMEOUT);
-    setTimeouts(prev => ({ ...prev, [`embedding-${index}`]: embeddingTimeout }));
-
+  const handleUpdateEmbeddings = async (brandId: number): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-embeddings`,
@@ -250,25 +109,105 @@ export function AgentBossControlCenter() {
         throw new Error(data.error || 'Failed to queue embedding');
       }
 
-      // Clear embedding timeout on success
-      clearTimeout(timeouts[`embedding-${index}`]);
-      setTimeouts(prev => {
-        const { [`embedding-${index}`]: _, ...rest } = prev;
-        return rest;
-      });
+      return { success: true };
     } catch (err: any) {
-      console.error('Error updating embeddings:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const handleAddBrand = async (candidate: CandidateBrand, index: number): Promise<CandidateBrand> => {
+    try {
+      // Get the next ID from the brands_id_seq sequence
+      const { data: seqData, error: seqError } = await supabase
+        .rpc('next_brand_id');
+
+      if (seqError) {
+        throw new Error(`Failed to get next brand ID: ${seqError.message}`); 
+      }
+      if (!seqData) throw new Error('Failed to get next brand ID');
+
+      const nextId = seqData;
+
+      // Now insert the brand with the next available ID
+      const { data: newBrand, error: insertError } = await supabase
+        .from('brands')
+        .insert([{
+          id: nextId,
+          name: candidate.name,
+          creators: candidate.creators,
+          description: candidate.description,
+          approval_status: 'approved'
+        }])
+        .select()
+        .single();
       
-      // Clear embedding timeout
-      clearTimeout(timeouts[`embedding-${index}`]);
+      if (insertError) {
+        if (insertError.code === '23505') { // Unique violation
+          throw new Error('Brand ID conflict detected. Please try again.');
+        }
+        throw insertError;
+      }
+
+      if (!newBrand) {
+        throw new Error('Failed to create brand');
+      }
+
+      // Try to generate embeddings with a timeout
+      const embeddingPromise = handleUpdateEmbeddings(newBrand.id);
+      const timeoutPromise = new Promise<{ success: false, error: string }>(
+        (_, reject) => setTimeout(() => reject({ 
+          success: false, 
+          error: 'Embedding generation timed out' 
+        }), 30000)
+      );
+
+      const embeddingResult = await Promise.race([embeddingPromise, timeoutPromise])
+        .catch(err => ({ success: false, error: err.message }));
+
+      return {
+        ...candidate,
+        id: newBrand.id,
+        isAdded: true,
+        isProcessing: false,
+        embeddingError: embeddingResult.success ? undefined : embeddingResult.error
+      };
+    } catch (err: any) {
+      return {
+        ...candidate,
+        isProcessing: false,
+        error: err.message || 'Failed to add brand'
+      };
+    }
+  };
+
+  const handleRejectCandidate = (index: number) => {
+    setCandidates(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleBulkAdd = async () => {
+    if (selectedCandidates.length === 0) return;
+    
+    setQueueError(null);
+    setIsProcessingBulk(true);
+    
+    try {
+      // Process selected candidates sequentially
+      for (const index of selectedCandidates) {
+        const candidate = candidates[index];
+        if (!candidate.isAdded && !candidate.isProcessing) {
+          updateCandidateStatus(index, { isProcessing: true });
+          const updatedCandidate = await handleAddBrand(candidate, index);
+          updateCandidateStatus(index, updatedCandidate);
+        }
+      }
       
-      setCandidates(prev => prev.map((c, i) => 
-        i === index ? { ...c, embeddingError: err.message } : c
-      ));
+      // Clear selection after processing
+      setSelectedCandidates([]);
+    } catch (err: any) {
+      console.error('Error in bulk processing:', err);
+      setQueueError(err.message);
     } finally {
-      setCandidates(prev => prev.map((c, i) => 
-        i === index ? { ...c, isUpdatingEmbedding: false } : c
-      ));
+      setIsProcessingBulk(false);
     }
   };
 
@@ -288,31 +227,6 @@ export function AgentBossControlCenter() {
     setSelectedCandidates(prev => 
       prev.length === availableCandidates.length ? [] : availableCandidates
     );
-  };
-
-  const handleBulkAdd = async () => {
-    if (selectedCandidates.length === 0) return;
-    
-    setQueueError(null);
-    setIsProcessingBulk(true);
-    
-    try {
-      // Process selected candidates sequentially to maintain order
-      for (const index of selectedCandidates) {
-        const candidate = candidates[index];
-        if (!candidate.isAdded && !candidate.isProcessing) {
-          await handleAddBrand(candidate, index);
-        }
-      }
-      
-      // Clear selection after processing
-      setSelectedCandidates([]);
-    } catch (err: any) {
-      console.error('Error in bulk processing:', err);
-      setQueueError(err.message);
-    } finally {
-      setIsProcessingBulk(false);
-    }
   };
 
   return (
