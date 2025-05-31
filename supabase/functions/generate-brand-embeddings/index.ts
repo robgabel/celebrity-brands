@@ -7,21 +7,46 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Always return proper CORS headers for OPTIONS requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: { ...corsHeaders },
+      status: 204
+    });
   }
 
   try {
-    const { brandId } = await req.json();
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openAiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!brandId) {
-      throw new Error('Brand ID is required');
+    if (!supabaseUrl || !supabaseKey || !openAiKey) {
+      throw new Error('Missing required environment variables');
     }
+
+    // Validate request body
+    const body = await req.json().catch(() => null);
+    if (!body || !body.brandId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Brand ID is required' 
+        }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    const { brandId } = body;
 
     // Initialize Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -38,16 +63,27 @@ Deno.serve(async (req) => {
       .single();
 
     if (brandError) {
-      throw brandError;
+      console.error('Database fetch error:', brandError);
+      throw new Error('Failed to fetch brand details');
     }
 
     if (!brand) {
-      throw new Error('Brand not found');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Brand not found' 
+        }), {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
     }
 
     // Initialize OpenAI
     const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: openAiKey,
     });
     const openai = new OpenAIApi(configuration);
 
@@ -74,36 +110,37 @@ Description: ${brand.description}`;
       .from('brands')
       .update({
         embedding: embeddingResponse.data[0].embedding,
+        last_embedded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', brandId);
 
     if (updateError) {
-      throw updateError;
+      console.error('Database update error:', updateError);
+      throw new Error('Failed to store brand embedding');
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Embedding generated and stored successfully',
-      }),
-      {
+      }), {
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,
         },
       }
     );
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Generate embedding error:', error);
 
     return new Response(
       JSON.stringify({
+        error: error.message || 'An unexpected error occurred',
         success: false,
-        error: error.message,
-      }),
-      {
-        status: 400,
+      }), {
+        status: error.status || 500,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,

@@ -7,20 +7,45 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Always return proper CORS headers for OPTIONS requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: { ...corsHeaders },
+      status: 204
+    });
   }
 
   try {
-    const { query } = await req.json();
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openAiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!query) {
-      throw new Error('Search query is required');
+    if (!supabaseUrl || !supabaseKey || !openAiKey) {
+      throw new Error('Missing required environment variables');
     }
+
+    // Validate request body
+    const body = await req.json().catch(() => null);
+    if (!body || !body.query) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Search query is required' 
+        }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    const { query } = body;
 
     // Initialize OpenAI
     const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: openAiKey,
     });
     const openai = new OpenAIApi(configuration);
 
@@ -31,14 +56,14 @@ Deno.serve(async (req) => {
       encoding_format: 'float',
     });
 
-    if (!embeddingResponse.data[0]?.embedding) {
+    if (!embeddingResponse.data?.[0]?.embedding) {
       throw new Error('Failed to generate query embedding');
     }
 
     // Initialize Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -52,33 +77,50 @@ Deno.serve(async (req) => {
       'match_brands',
       {
         query_embedding: embeddingResponse.data[0].embedding,
-        match_threshold: 0.5, // Adjust threshold as needed
-        match_count: 10 // Adjust limit as needed
+        match_threshold: 0.5,
+        match_count: 10
       }
     );
 
     if (searchError) {
-      throw searchError;
+      console.error('Database search error:', searchError);
+      throw new Error('Failed to search database');
+    }
+
+    if (!matches) {
+      return new Response(
+        JSON.stringify({ 
+          results: [] 
+        }), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
     }
 
     return new Response(
-      JSON.stringify(matches),
-      {
+      JSON.stringify({
+        results: matches,
+      }), {
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,
         },
       }
     );
-  } catch (error) {
-    console.error('Error:', error);
 
+  } catch (error) {
+    console.error('Semantic search error:', error);
+
+    // Return a structured error response
     return new Response(
       JSON.stringify({
-        error: error.message,
-      }),
-      {
-        status: 400,
+        error: error.message || 'An unexpected error occurred',
+        success: false,
+      }), {
+        status: error.status || 500,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,
