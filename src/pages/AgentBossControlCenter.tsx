@@ -116,6 +116,9 @@ export function AgentBossControlCenter() {
   };
 
   const handleAddBrand = async (candidate: CandidateBrand, index: number): Promise<CandidateBrand> => {
+    // Update UI to show processing state
+    updateCandidateStatus(index, { isProcessing: true, error: null });
+    
     try {
       // Get the next ID from the brands_id_seq sequence
       const { data: seqData, error: seqError } = await supabase
@@ -153,6 +156,8 @@ export function AgentBossControlCenter() {
       }
 
       // Try to generate embeddings with a timeout
+      updateCandidateStatus(index, { isUpdatingEmbedding: true });
+      
       const embeddingPromise = handleUpdateEmbeddings(newBrand.id);
       const timeoutPromise = new Promise<{ success: false, error: string }>(
         (_, reject) => setTimeout(() => reject({ 
@@ -164,19 +169,31 @@ export function AgentBossControlCenter() {
       const embeddingResult = await Promise.race([embeddingPromise, timeoutPromise])
         .catch(err => ({ success: false, error: err.message }));
 
-      return {
+      const updatedCandidate = {
         ...candidate,
         id: newBrand.id,
         isAdded: true,
         isProcessing: false,
+        isUpdatingEmbedding: false,
         embeddingError: embeddingResult.success ? undefined : embeddingResult.error
       };
+      
+      // Update UI with final state
+      updateCandidateStatus(index, updatedCandidate);
+      
+      return updatedCandidate;
     } catch (err: any) {
-      return {
+      const errorState = {
         ...candidate,
         isProcessing: false,
+        isUpdatingEmbedding: false,
         error: err.message || 'Failed to add brand'
       };
+      
+      // Update UI with error state
+      updateCandidateStatus(index, errorState);
+      
+      return errorState;
     }
   };
 
@@ -187,6 +204,7 @@ export function AgentBossControlCenter() {
   const handleBulkAdd = async () => {
     if (selectedCandidates.length === 0) return;
     
+    setProcessingError(null);
     setQueueError(null);
     setIsProcessingBulk(true);
     
@@ -195,9 +213,7 @@ export function AgentBossControlCenter() {
       for (const index of selectedCandidates) {
         const candidate = candidates[index];
         if (!candidate.isAdded && !candidate.isProcessing) {
-          updateCandidateStatus(index, { isProcessing: true });
-          const updatedCandidate = await handleAddBrand(candidate, index);
-          updateCandidateStatus(index, updatedCandidate);
+          await handleAddBrand(candidate, index);
         }
       }
       
