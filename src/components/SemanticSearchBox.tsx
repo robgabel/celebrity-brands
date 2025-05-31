@@ -22,24 +22,20 @@ export function SemanticSearchBox() {
   const [showResults, setShowResults] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     if (e) {
       e.preventDefault();
-      if (!searchQuery.trim()) return;
-      
-      // Navigate to explore page with search query
-      navigate(`/explore?semantic=${encodeURIComponent(searchQuery)}`);
-      setShowResults(false);
-      return;
     }
 
     if (!debouncedSearchQuery.trim()) {
       setResults([]);
+      setShowResults(false);
       return;
     }
 
     setIsSearching(true);
     setError(null);
+    setShowResults(true);
 
     try {
       const response = await fetch(
@@ -59,12 +55,10 @@ export function SemanticSearchBox() {
         throw new Error(error.error || `Failed to search: ${response.status}`);
       }
 
-      const matches = await response.json();
       setResults(matches);
-      setShowResults(true);
     } catch (err: any) {
       console.error('Search error:', err);
-      setError(err.message);
+      setResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -73,7 +67,7 @@ export function SemanticSearchBox() {
   const handleResultClick = (result: SearchResult) => {
     setSearchQuery('');
     setShowResults(false);
-    navigate(`/brands/${result.id}`);
+    window.location.href = `/brands/${result.id}`;
   };
 
   return (
