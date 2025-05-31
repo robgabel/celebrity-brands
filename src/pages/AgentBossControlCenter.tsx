@@ -88,7 +88,7 @@ export function AgentBossControlCenter() {
   const handleUpdateEmbeddings = async (brandId: number): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/queue-brand-embeddings`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-embeddings`,
         {
           method: 'POST',
           headers: {
@@ -118,6 +118,7 @@ export function AgentBossControlCenter() {
   const handleAddBrand = async (candidate: CandidateBrand, index: number): Promise<CandidateBrand> => {
     // Update UI to show processing state
     updateCandidateStatus(index, { isProcessing: true, error: null });
+    setProcessingError(null);
     
     try {
       // Get the next ID from the brands_id_seq sequence
@@ -125,6 +126,7 @@ export function AgentBossControlCenter() {
         .rpc('next_brand_id');
 
       if (seqError) {
+        console.error('Error getting next brand ID:', seqError);
         throw new Error(`Failed to get next brand ID: ${seqError.message}`); 
       }
       if (!seqData) throw new Error('Failed to get next brand ID');
