@@ -5,9 +5,7 @@ import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock, CheckSq
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
-import { supabase } from '../lib/supabase';
-
-const EMBEDDING_TIMEOUT = 30000; // 30 seconds
+import { supabase } from '../lib/supabase'; 
 
 interface CandidateBrand {
   name: string;
@@ -17,8 +15,6 @@ interface CandidateBrand {
   isProcessing?: boolean;
   isAdded?: boolean;
   error?: string;
-  isUpdatingEmbedding?: boolean;
-  embeddingError?: string;
 }
 
 export function AgentBossControlCenter() {
@@ -85,36 +81,6 @@ export function AgentBossControlCenter() {
     }
   };
 
-  const handleUpdateEmbeddings = async (brandId: number): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-embeddings`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ brandId })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to queue embedding: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to queue embedding');
-      }
-
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message };
-    }
-  };
-
   const handleAddBrand = async (candidate: CandidateBrand, index: number): Promise<CandidateBrand> => {
     // Update UI to show processing state
     updateCandidateStatus(index, { isProcessing: true, error: null });
@@ -157,38 +123,19 @@ export function AgentBossControlCenter() {
         throw new Error('Failed to create brand');
       }
 
-      // Try to generate embeddings with a timeout
-      updateCandidateStatus(index, { isUpdatingEmbedding: true });
-      
-      const embeddingPromise = handleUpdateEmbeddings(newBrand.id);
-      const timeoutPromise = new Promise<{ success: false, error: string }>(
-        (_, reject) => setTimeout(() => reject({ 
-          success: false, 
-          error: 'Embedding generation timed out' 
-        }), 30000)
-      );
-
-      const embeddingResult = await Promise.race([embeddingPromise, timeoutPromise])
-        .catch(err => ({ success: false, error: err.message }));
-
       const updatedCandidate = {
         ...candidate,
         id: newBrand.id,
         isAdded: true,
-        isProcessing: false,
-        isUpdatingEmbedding: false,
-        embeddingError: embeddingResult.success ? undefined : embeddingResult.error
+        isProcessing: false
       };
       
-      // Update UI with final state
       updateCandidateStatus(index, updatedCandidate);
-      
       return updatedCandidate;
     } catch (err: any) {
       const errorState = {
         ...candidate,
         isProcessing: false,
-        isUpdatingEmbedding: false,
         error: err.message || 'Failed to add brand'
       };
       
@@ -399,11 +346,6 @@ export function AgentBossControlCenter() {
                                 {candidate.error}
                               </p>
                             )}
-                            {candidate.embeddingError && (
-                              <p className="text-sm text-red-400 mt-2">
-                                {candidate.embeddingError}
-                              </p>
-                            )}
                           </div>                          
                         </div>
                         <div className="flex justify-end mt-4">
@@ -436,16 +378,7 @@ export function AgentBossControlCenter() {
                               </>
                             ) : (
                               <span className="text-sm text-green-400">
-                                {candidate.isUpdatingEmbedding ? (
-                                  <span className="flex items-center gap-1">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Updating Embedding...
-                                  </span>
-                                ) : candidate.embeddingError ? (
-                                  'Added with Limited Search'
-                                ) : (
-                                  'Added Successfully'
-                                )}
+                                Added Successfully
                               </span>
                             )}
                           </div>
