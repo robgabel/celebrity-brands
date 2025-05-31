@@ -55,9 +55,11 @@ export function SemanticSearchBox() {
         throw new Error(error.error || `Failed to search: ${response.status}`);
       }
 
+      const matches = await response.json();
       setResults(matches);
     } catch (err: any) {
       console.error('Search error:', err);
+      setError(err.message);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -67,7 +69,7 @@ export function SemanticSearchBox() {
   const handleResultClick = (result: SearchResult) => {
     setSearchQuery('');
     setShowResults(false);
-    window.location.href = `/brands/${result.id}`;
+    navigate(`/brands/${result.id}`);
   };
 
   return (
