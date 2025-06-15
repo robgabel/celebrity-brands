@@ -6,6 +6,8 @@ interface AuthStore extends AuthState {
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -128,6 +130,33 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
+  resetPassword: async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        handleSupabaseError(error, 'password reset');
+      }
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updatePassword: async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+      
+      if (error) {
+        handleSupabaseError(error, 'password update');
+      }
+    } catch (error) {
+      throw error;
+    }
+  },
   updateProfile: async (updates) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

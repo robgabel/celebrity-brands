@@ -9,6 +9,8 @@ import { BrandDetails } from './pages/BrandDetails';
 import { AuthGuard } from './components/AuthGuard';
 import { AdminGuard } from './components/AdminGuard';
 import { AgentBossControlCenter } from './pages/AgentBossControlCenter';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 
 function App() {
   const initialize = useAuthStore(state => state.initialize);
@@ -25,6 +27,8 @@ function App() {
         <Route path="/brands/:brandSlug" element={<BrandDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route 
           path="/admin/agent-boss-control-center" 
           element={

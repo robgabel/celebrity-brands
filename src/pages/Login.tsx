@@ -107,12 +107,18 @@ export function Login() {
         </form>
 
         <div className="mt-6 space-y-4">
-          <p className="text-center text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
-              Sign up
-            </Link>
-          </p>
+            <p className="text-center text-gray-600">
+              <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
+                Forgot your password?
+              </Link>
+            </p>
+
+            <p className="text-center text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+                Sign up
+              </Link>
+            </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start space-x-3">
