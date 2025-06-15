@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { useAuthStore } from '../stores/authStore';
+import { AlertCircle, Info } from 'lucide-react';
 
 export function Login() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +23,22 @@ export function Login() {
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message === 'Invalid login credentials' 
-        ? 'Incorrect email or password. Please try again.'
-        : err.message);
-      setPassword('');
+      
+      // Enhanced error handling with more specific messages
+      if (err.message === 'Invalid login credentials' || err.message.includes('invalid_credentials')) {
+        setError('The email or password you entered is incorrect. Please check your credentials and try again.');
+        setShowHelp(true);
+      } else if (err.message.includes('Email not confirmed')) {
+        setError('Please check your email and click the confirmation link before signing in.');
+      } else if (err.message.includes('Too many requests')) {
+        setError('Too many login attempts. Please wait a few minutes before trying again.');
+      } else if (err.message.includes('Network error') || err.message.includes('Failed to fetch')) {
+        setError('Network connection error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
+      
+      setPassword(''); // Clear password on error for security
     } finally {
       setIsLoading(false);
     }
@@ -36,8 +50,21 @@ export function Login() {
         <h1 className="text-4xl font-bold mb-8 text-center">Login</h1>
         
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4 flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium">{error}</p>
+              {showHelp && (
+                <div className="mt-3 text-sm">
+                  <p className="mb-2">Having trouble logging in?</p>
+                  <ul className="list-disc list-inside space-y-1 text-red-600">
+                    <li>Double-check your email address for typos</li>
+                    <li>Make sure your password is correct (passwords are case-sensitive)</li>
+                    <li>If you don't have an account, <Link to="/signup" className="underline hover:no-underline">sign up here</Link></li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -53,6 +80,8 @@ export function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoComplete="email"
+              disabled={isLoading}
             />
           </div>
 
@@ -67,20 +96,34 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoComplete="current-password"
+              disabled={isLoading}
             />
           </div>
 
           <Button type="submit" isLoading={isLoading} className="w-full">
-            Login
+            {isLoading ? 'Signing in...' : 'Login'}
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-gray-600">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-blue-600 hover:text-blue-700">
-            Sign up
-          </Link>
-        </p>
+        <div className="mt-6 space-y-4">
+          <p className="text-center text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+              Sign up
+            </Link>
+          </p>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">New to the platform?</p>
+                <p>Create an account to save your favorite brands, set goals, and get personalized recommendations.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
