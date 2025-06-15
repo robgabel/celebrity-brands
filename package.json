@@ -13,7 +13,8 @@
     "db:reset": "node scripts/reset-database.js --reset",
     "db:status": "echo 'Check your Supabase dashboard for current database status'",
     "db:make-idempotent": "node scripts/make-migrations-idempotent.js",
-    "db:validate": "node scripts/validate-migrations.js"
+    "db:validate": "node scripts/validate-migrations.js",
+    "generate-embeddings": "node scripts/generate-all-embeddings.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
