@@ -32,6 +32,7 @@ export function ExplorePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [founderTypes, setFounderTypes] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -85,6 +86,7 @@ export function ExplorePage() {
   const handleSemanticSearch = async () => {
     if (semanticQuery) {
       try {
+        setError(null);
         setLoading(true);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
@@ -104,8 +106,8 @@ export function ExplorePage() {
         }
 
         const matches = await response.json();
-        setBrands(matches);
-        setTotalItems(matches.length);
+        setBrands(matches.results || matches);
+        setTotalItems((matches.results || matches).length);
         checkAuth(); // Still need to check auth for other features
         return;
       } catch (err: any) {
