@@ -17,12 +17,13 @@ export function ExplorePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const semanticQuery = searchParams.get('semantic');
+  const searchQuery = searchParams.get('search');
   const [semanticResults, setSemanticResults] = useState<Brand[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+  const [searchInput, setSearchInput] = useState(searchQuery || '');
+  const [debouncedSearchQuery] = useDebounce(searchInput, 300);
   const [sortBy, setSortBy] = useState<string>('az');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'All Categories');
   const [founderFilter, setFounderFilter] = useState(searchParams.get('founderType') || 'All Founder Types');
@@ -44,7 +45,7 @@ export function ExplorePage() {
   } = usePagination(25);
 
   const clearFilters = () => {
-    setSearchQuery('');
+    setSearchInput('');
     setSortBy('az');
     setCategoryFilter('All Categories');
     setFounderFilter('All Founder Types');
@@ -64,7 +65,11 @@ export function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    checkAuth();
+    if (semanticQuery) {
+      handleSemanticSearch();
+    } else {
+      checkAuth();
+    }
   }, []);
 
   useEffect(() => {
@@ -77,10 +82,10 @@ export function ExplorePage() {
     }
   }, [isAuthenticated]);
 
-  const checkAuth = async () => {
+  const handleSemanticSearch = async () => {
     if (semanticQuery) {
-      // Handle semantic search
       try {
+        setLoading(true);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
           {
@@ -101,7 +106,7 @@ export function ExplorePage() {
         const matches = await response.json();
         setBrands(matches);
         setTotalItems(matches.length);
-        setLoading(false);
+        checkAuth(); // Still need to check auth for other features
         return;
       } catch (err: any) {
         console.error('Semantic search error:', err);
@@ -110,7 +115,11 @@ export function ExplorePage() {
         return;
       }
     }
+  };
 
+  const checkAuth = async () => {
+    setLoading(false);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setIsAuthenticated(!!user);
@@ -378,6 +387,27 @@ export function ExplorePage() {
             </Button>
           </div>
         </div>
+
+        {semanticQuery && (
+          <div className="mb-6 p-4 bg-teal-900/20 border border-teal-700/50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Search className="w-5 h-5 text-teal-400" />
+              <span className="text-teal-400 font-medium">Semantic Search Results</span>
+            </div>
+            <p className="text-gray-300">
+              Showing brands matching: <span className="font-medium text-gray-100">"{semanticQuery}"</span>
+            </p>
+            <button
+              onClick={() => {
+                navigate('/explore');
+                window.location.reload();
+              }}
+              className="mt-2 text-sm text-teal-400 hover:text-teal-300"
+            >
+              ← Back to all brands
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12">
