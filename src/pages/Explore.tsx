@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Grid3X3, List, TrendingUp, TrendingDown } from 'lucide-react';
+import { Grid3X3, List, TrendingUp, TrendingDown, Search } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
