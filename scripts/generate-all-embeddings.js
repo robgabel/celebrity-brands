@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Generate embeddings for all brands that don't have them
+ * Generate embeddings for all brands that don't have them or have zero embeddings
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -50,7 +50,7 @@ async function generateEmbeddingForBrand(brandId) {
     }
 
     const result = await response.json();
-    console.log(`✅ Successfully generated embedding for brand ${brandId}`);
+    console.log(`✅ Successfully generated embedding for brand ${brandId} (${result.embeddingLength} dimensions)`);
     return result;
   } catch (error) {
     console.error(`❌ Failed to generate embedding for brand ${brandId}:`, error.message);
@@ -58,15 +58,21 @@ async function generateEmbeddingForBrand(brandId) {
   }
 }
 
+function isZeroEmbedding(embedding) {
+  if (!embedding || !Array.isArray(embedding)) return true;
+  
+  // Check if all values are 0
+  return embedding.every(value => value === 0);
+}
+
 async function generateAllEmbeddings() {
   try {
     console.log('🔍 Fetching brands that need embeddings...');
 
-    // Get all brands that don't have embeddings
+    // Get all approved brands with their current embeddings
     const { data: brands, error: fetchError } = await supabase
       .from('brands')
-      .select('id, name')
-      .is('embedding', null)
+      .select('id, name, embedding')
       .eq('approval_status', 'approved');
 
     if (fetchError) {
@@ -74,30 +80,53 @@ async function generateAllEmbeddings() {
     }
 
     if (!brands || brands.length === 0) {
-      console.log('✅ All brands already have embeddings!');
+      console.log('❌ No approved brands found!');
       return;
     }
 
-    console.log(`📊 Found ${brands.length} brands that need embeddings`);
+    // Filter brands that need embeddings (NULL or all zeros)
+    const brandsNeedingEmbeddings = brands.filter(brand => {
+      return !brand.embedding || isZeroEmbedding(brand.embedding);
+    });
+
+    if (brandsNeedingEmbeddings.length === 0) {
+      console.log('✅ All brands already have valid embeddings!');
+      
+      // Show some stats
+      const validEmbeddings = brands.filter(b => b.embedding && !isZeroEmbedding(b.embedding));
+      console.log(`📊 Total approved brands: ${brands.length}`);
+      console.log(`📊 Brands with valid embeddings: ${validEmbeddings.length}`);
+      return;
+    }
+
+    console.log(`📊 Total approved brands: ${brands.length}`);
+    console.log(`📊 Brands needing embeddings: ${brandsNeedingEmbeddings.length}`);
+    
+    // Show breakdown
+    const nullEmbeddings = brands.filter(b => !b.embedding).length;
+    const zeroEmbeddings = brands.filter(b => b.embedding && isZeroEmbedding(b.embedding)).length;
+    
+    console.log(`  - NULL embeddings: ${nullEmbeddings}`);
+    console.log(`  - Zero embeddings: ${zeroEmbeddings}`);
     console.log('🚀 Starting embedding generation...\n');
 
     let successCount = 0;
     let failureCount = 0;
     const failures = [];
 
-    for (let i = 0; i < brands.length; i++) {
-      const brand = brands[i];
+    for (let i = 0; i < brandsNeedingEmbeddings.length; i++) {
+      const brand = brandsNeedingEmbeddings[i];
       
       try {
         await generateEmbeddingForBrand(brand.id);
         successCount++;
         
         // Progress indicator
-        const progress = Math.round(((i + 1) / brands.length) * 100);
-        console.log(`📈 Progress: ${i + 1}/${brands.length} (${progress}%)\n`);
+        const progress = Math.round(((i + 1) / brandsNeedingEmbeddings.length) * 100);
+        console.log(`📈 Progress: ${i + 1}/${brandsNeedingEmbeddings.length} (${progress}%)\n`);
         
         // Add a small delay to avoid rate limiting
-        if (i < brands.length - 1) {
+        if (i < brandsNeedingEmbeddings.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
@@ -118,14 +147,29 @@ async function generateAllEmbeddings() {
     }
 
     // Verify embeddings were created
+    console.log('\n🔍 Verifying embeddings...');
     const { data: updatedBrands, error: verifyError } = await supabase
       .from('brands')
-      .select('id')
-      .not('embedding', 'is', null)
+      .select('id, embedding')
       .eq('approval_status', 'approved');
 
     if (!verifyError && updatedBrands) {
-      console.log(`\n🔍 Verification: ${updatedBrands.length} brands now have embeddings`);
+      const validEmbeddings = updatedBrands.filter(b => b.embedding && !isZeroEmbedding(b.embedding));
+      const stillNeedEmbeddings = updatedBrands.filter(b => !b.embedding || isZeroEmbedding(b.embedding));
+      
+      console.log(`📊 Brands with valid embeddings: ${validEmbeddings.length}/${updatedBrands.length}`);
+      
+      if (stillNeedEmbeddings.length > 0) {
+        console.log(`⚠️  Brands still needing embeddings: ${stillNeedEmbeddings.length}`);
+        stillNeedEmbeddings.slice(0, 5).forEach(brand => {
+          console.log(`  - Brand ${brand.id}: ${brand.embedding ? 'Zero embedding' : 'NULL embedding'}`);
+        });
+        if (stillNeedEmbeddings.length > 5) {
+          console.log(`  ... and ${stillNeedEmbeddings.length - 5} more`);
+        }
+      } else {
+        console.log('🎉 All brands now have valid embeddings!');
+      }
     }
 
   } catch (error) {
@@ -135,7 +179,7 @@ async function generateAllEmbeddings() {
 }
 
 // Run the script
-console.log('🤖 Starting embedding generation for all brands...\n');
+console.log('🤖 Starting embedding generation for all brands (including zero embeddings)...\n');
 generateAllEmbeddings()
   .then(() => {
     console.log('\n✨ All done! Your semantic search should now work properly.');
