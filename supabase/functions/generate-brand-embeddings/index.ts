@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import { Configuration, OpenAIApi } from 'npm:openai@4.28.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,12 +80,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Initialize OpenAI
-    const configuration = new Configuration({
-      apiKey: openAiKey,
-    });
-    const openai = new OpenAIApi(configuration);
-
     // Create the text to embed
     const textToEmbed = `Brand: ${brand.name}
 Creators: ${brand.creators}
@@ -94,14 +87,29 @@ Category: ${brand.product_category || 'Unknown'}
 Creator Type: ${brand.type_of_influencer || 'Unknown'}
 Description: ${brand.description}`;
 
-    // Generate embedding
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: textToEmbed,
-      encoding_format: 'float',
+    // Generate embedding using OpenAI API directly
+    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: textToEmbed,
+        encoding_format: 'float',
+      }),
     });
 
-    if (!embeddingResponse.data[0]?.embedding) {
+    if (!embeddingResponse.ok) {
+      const errorText = await embeddingResponse.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${embeddingResponse.status} ${embeddingResponse.statusText}`);
+    }
+
+    const embeddingData = await embeddingResponse.json();
+
+    if (!embeddingData.data?.[0]?.embedding) {
       throw new Error('No embedding generated');
     }
 
@@ -109,7 +117,7 @@ Description: ${brand.description}`;
     const { error: updateError } = await supabaseClient
       .from('brands')
       .update({
-        embedding: embeddingResponse.data[0].embedding,
+        embedding: embeddingData.data[0].embedding,
         last_embedded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -124,6 +132,8 @@ Description: ${brand.description}`;
       JSON.stringify({
         success: true,
         message: 'Embedding generated and stored successfully',
+        brandId: brandId,
+        embeddingLength: embeddingData.data[0].embedding.length
       }), {
         headers: {
           'Content-Type': 'application/json',
