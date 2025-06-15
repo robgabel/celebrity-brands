@@ -11,7 +11,9 @@
     "generate-embeddings": "tsc src/scripts/generateEmbeddings.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext && node dist/scripts/generateEmbeddings.js",
     "db:migrate": "node scripts/reset-database.js",
     "db:reset": "node scripts/reset-database.js --reset",
-    "db:status": "echo 'Check your Supabase dashboard for current database status'"
+    "db:status": "echo 'Check your Supabase dashboard for current database status'",
+    "db:make-idempotent": "node scripts/make-migrations-idempotent.js",
+    "db:validate": "node scripts/validate-migrations.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
