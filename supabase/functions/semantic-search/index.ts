@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import { Configuration, OpenAIApi } from 'npm:openai@4.28.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,20 +42,29 @@ Deno.serve(async (req) => {
 
     const { query } = body;
 
-    // Initialize OpenAI
-    const configuration = new Configuration({
-      apiKey: openAiKey,
+    // Generate embedding for search query using OpenAI API directly
+    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: query,
+        encoding_format: 'float',
+      }),
     });
-    const openai = new OpenAIApi(configuration);
 
-    // Generate embedding for search query
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: query,
-      encoding_format: 'float',
-    });
+    if (!embeddingResponse.ok) {
+      const errorText = await embeddingResponse.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${embeddingResponse.status} ${embeddingResponse.statusText}`);
+    }
 
-    if (!embeddingResponse.data?.[0]?.embedding) {
+    const embeddingData = await embeddingResponse.json();
+
+    if (!embeddingData.data?.[0]?.embedding) {
       throw new Error('Failed to generate query embedding');
     }
 
@@ -76,7 +84,7 @@ Deno.serve(async (req) => {
     const { data: matches, error: searchError } = await supabaseClient.rpc(
       'match_brands',
       {
-        query_embedding: embeddingResponse.data[0].embedding,
+        query_embedding: embeddingData.data[0].embedding,
         match_threshold: 0.5,
         match_count: 10
       }
