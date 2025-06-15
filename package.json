@@ -8,7 +8,10 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "generate-embeddings": "tsc src/scripts/generateEmbeddings.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext && node dist/scripts/generateEmbeddings.js"
+    "generate-embeddings": "tsc src/scripts/generateEmbeddings.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext && node dist/scripts/generateEmbeddings.js",
+    "db:migrate": "node scripts/reset-database.js",
+    "db:reset": "node scripts/reset-database.js --reset",
+    "db:status": "echo 'Check your Supabase dashboard for current database status'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
