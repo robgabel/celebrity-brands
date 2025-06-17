@@ -35,36 +35,51 @@ export function ResetPassword() {
   const isPasswordValid = passwordStrength.score >= 3 && password.length >= 8;
 
   useEffect(() => {
-    // Check if we have valid session from password reset
+    // Check for password reset tokens in URL
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // First check for access_token and refresh_token in URL params
+        const accessToken = searchParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token');
+        const type = searchParams.get('type');
+        const code = searchParams.get('code');
         
-        if (error) {
-          console.error('Session error:', error);
-          setError('Invalid or expired reset link. Please request a new password reset.');
-          setIsValidToken(false);
-        } else if (session) {
-          setIsValidToken(true);
-        } else {
-          // Check for access_token and refresh_token in URL params
-          const accessToken = searchParams.get('access_token');
-          const refreshToken = searchParams.get('refresh_token');
+        // Handle different auth flow types
+        if (type === 'recovery' && (accessToken && refreshToken)) {
+          // Direct token approach
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
           
-          if (accessToken && refreshToken) {
-            // Set the session using the tokens from the URL
-            const { error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-            
-            if (sessionError) {
-              console.error('Session set error:', sessionError);
-              setError('Invalid or expired reset link. Please request a new password reset.');
-              setIsValidToken(false);
-            } else {
-              setIsValidToken(true);
-            }
+          if (sessionError) {
+            console.error('Session set error:', sessionError);
+            setError('Invalid or expired reset link. Please request a new password reset.');
+            setIsValidToken(false);
+          } else {
+            setIsValidToken(true);
+          }
+        } else if (code) {
+          // Exchange code for session
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (exchangeError) {
+            console.error('Code exchange error:', exchangeError);
+            setError('Invalid or expired reset link. Please request a new password reset.');
+            setIsValidToken(false);
+          } else {
+            setIsValidToken(true);
+          }
+        } else {
+          // Check if we already have a valid session
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Session error:', error);
+            setError('Invalid or expired reset link. Please request a new password reset.');
+            setIsValidToken(false);
+          } else if (session) {
+            setIsValidToken(true);
           } else {
             setError('Invalid or expired reset link. Please request a new password reset.');
             setIsValidToken(false);
