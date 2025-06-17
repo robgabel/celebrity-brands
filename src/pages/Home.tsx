@@ -8,13 +8,8 @@ import { getCategoryIcon } from '../lib/categoryUtils';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { SemanticSearchBox } from '../components/SemanticSearchBox';
+import { ErrorMessage } from '../components/ErrorMessage';
 import type { Brand } from '../types/brand';
-
-interface SearchSuggestion {
-  type: 'brand' | 'category';
-  text: string;
-  subtext?: string;
-}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -33,7 +28,6 @@ export function HomePage() {
         setLoading(true);
         setError(null);
         
-        // Get total count of approved brands
         const { count: brandsCount } = await supabase
           .from('brands')
           .select('*', { count: 'exact', head: true })
@@ -41,7 +35,6 @@ export function HomePage() {
         
         setTotalBrands(brandsCount || 0);
         
-        // Fetch featured brands (currently just getting popular ones)
         const { data: featuredData, error: featuredError } = await supabase
           .from('brands')
           .select('*')
@@ -51,7 +44,6 @@ export function HomePage() {
         if (featuredError) throw featuredError;
         setFeaturedBrands(featuredData || []);
         
-        // Fetch recently added brands
         const { data: recentData, error: recentError } = await supabase
           .from('brands')
           .select('*')
@@ -62,7 +54,6 @@ export function HomePage() {
         if (recentError) throw recentError;
         setRecentBrands(recentData || []);
         
-        // Fetch categories
         const { data: categoryData, error: categoryError } = await supabase
           .from('brands')
           .select('product_category')
@@ -103,16 +94,16 @@ export function HomePage() {
       <div className="min-h-screen bg-gray-900">
         <GlobalNav />
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="bg-red-900/50 border border-red-800 text-red-200 p-6 rounded-lg max-w-lg">
-            <h2 className="text-xl font-semibold mb-2">Connection Error</h2>
-            <p className="mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded-md transition-colors"
-            >
-              Retry
-            </button>
-          </div>
+          <ErrorMessage 
+            message={error} 
+            className="max-w-lg"
+          />
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-red-800 hover:bg-red-700 rounded-md transition-colors text-white"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -138,7 +129,6 @@ export function HomePage() {
       </Helmet>
       <GlobalNav />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Hero Section */}
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
             Discover and Track {totalBrands.toLocaleString()}<br />
@@ -160,7 +150,6 @@ export function HomePage() {
           </div>
         </section>
         
-        {/* Featured Brands */}
         <section className="mb-16">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Featured Brands</h2>
@@ -184,7 +173,6 @@ export function HomePage() {
           </div>
         </section>
         
-        {/* Categories */}
         <section className="mb-16">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Browse by Category</h2>
@@ -215,7 +203,6 @@ export function HomePage() {
           </div>
         </section>
         
-        {/* Recently Added */}
         <section className="mb-16">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-100 flex items-center gap-2">
@@ -236,7 +223,6 @@ export function HomePage() {
           </div>
         </section>
         
-        {/* Call to Action - Only shown to non-authenticated users */}
         {!isAuthenticated && (
           <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 text-center mb-8 border border-gray-700/50">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-4">

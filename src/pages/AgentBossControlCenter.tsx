@@ -5,6 +5,7 @@ import { Bot, Search, CheckCircle, XCircle, Loader2, AlertCircle, Clock, CheckSq
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
+import { ErrorMessage } from '../components/ErrorMessage';
 import { supabase } from '../lib/supabase'; 
 
 interface CandidateBrand {
@@ -37,7 +38,6 @@ export function AgentBossControlCenter() {
     if (!instructions.trim()) return;
 
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/research-agent-petra`;
-    console.log('Calling Edge Function:', apiUrl);
 
     setPetraStatus('executing');
     setPetraError(null);
@@ -82,12 +82,10 @@ export function AgentBossControlCenter() {
   };
 
   const handleAddBrand = async (candidate: CandidateBrand, index: number): Promise<CandidateBrand> => {
-    // Update UI to show processing state
     updateCandidateStatus(index, { isProcessing: true, error: null });
     setProcessingError(null);
     
     try {
-      // Get the next ID from the brands_id_seq sequence
       const { data: seqData, error: seqError } = await supabase
         .rpc('next_brand_id');
 
@@ -99,7 +97,6 @@ export function AgentBossControlCenter() {
 
       const nextId = seqData;
 
-      // Now insert the brand with the next available ID
       const { data: newBrand, error: insertError } = await supabase
         .from('brands')
         .insert([{
@@ -113,7 +110,7 @@ export function AgentBossControlCenter() {
         .single();
       
       if (insertError) {
-        if (insertError.code === '23505') { // Unique violation
+        if (insertError.code === '23505') {
           throw new Error('Brand ID conflict detected. Please try again.');
         }
         throw insertError;
@@ -139,7 +136,6 @@ export function AgentBossControlCenter() {
         error: err.message || 'Failed to add brand'
       };
       
-      // Update UI with error state
       updateCandidateStatus(index, errorState);
       
       return errorState;
@@ -158,7 +154,6 @@ export function AgentBossControlCenter() {
     setIsProcessingBulk(true);
     
     try {
-      // Process selected candidates sequentially
       for (const index of selectedCandidates) {
         const candidate = candidates[index];
         if (!candidate.isAdded && !candidate.isProcessing) {
@@ -166,7 +161,6 @@ export function AgentBossControlCenter() {
         }
       }
       
-      // Clear selection after processing
       setSelectedCandidates([]);
     } catch (err: any) {
       console.error('Error in bulk processing:', err);
@@ -211,7 +205,6 @@ export function AgentBossControlCenter() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {/* Petra Agent Card */}
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -258,18 +251,9 @@ export function AgentBossControlCenter() {
                 </Button>
               </div>
 
-              {petraError && (
-                <div className="p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700/50">
-                  {petraError}
-                </div>
-              )}
+              {petraError && <ErrorMessage message={petraError} />}
 
-              {processingError && (
-                <div className="p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700/50 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>{processingError}</span>
-                </div>
-              )}
+              {processingError && <ErrorMessage message={processingError} />}
 
               {candidates.length > 0 && (
                 <div className="mt-8">
@@ -342,9 +326,11 @@ export function AgentBossControlCenter() {
                               {candidate.description}
                             </p>
                             {candidate.error && (
-                              <p className="text-sm text-red-400 mt-2">
-                                {candidate.error}
-                              </p>
+                              <ErrorMessage 
+                                message={candidate.error} 
+                                className="mt-2 text-sm" 
+                                showIcon={false}
+                              />
                             )}
                           </div>                          
                         </div>

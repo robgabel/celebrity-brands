@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { AdminRibbon } from './AdminRibbon';
 import { useDebounce } from '../hooks/useDebounce';
+import { ErrorMessage } from './ErrorMessage';
 
 interface SearchResult {
   id: number;
@@ -43,7 +44,6 @@ export function GlobalNav({
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [error, setError] = useState<string | null>(null);
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('.search-container')) {
@@ -56,9 +56,6 @@ export function GlobalNav({
   }, []);
 
   useEffect(() => {
-    console.log('Search query changed:', searchQuery);
-    console.log('Debounced search:', debouncedSearch);
-    
     if (debouncedSearch.trim()) {
       fetchSuggestions();
     } else {
@@ -69,10 +66,8 @@ export function GlobalNav({
   const fetchSuggestions = async () => {
     setIsLoadingSuggestions(true);
     setError(null);
-    console.log('Fetching suggestions for:', debouncedSearch);
     
     try {
-      // Search brands with IDs
       const { data: brands, error: brandsError } = await supabase
         .from('brands')
         .select('id, name, creators')
@@ -81,13 +76,9 @@ export function GlobalNav({
         .limit(5);
 
       if (brandsError) {
-        console.error('Brands query error:', brandsError);
         throw brandsError;
       }
 
-      console.log('Brands results:', brands);
-
-      // Search categories with distinct values
       const { data: categories, error: categoriesError } = await supabase
         .from('brands')
         .select('product_category')
@@ -96,11 +87,8 @@ export function GlobalNav({
         .limit(3);
 
       if (categoriesError) {
-        console.error('Categories query error:', categoriesError);
         throw categoriesError;
       }
-
-      console.log('Categories results:', categories);
 
       const uniqueCategories = Array.from(
         new Set(categories?.map(item => item.product_category) || [])
@@ -119,9 +107,8 @@ export function GlobalNav({
         }))
       ];
 
-      console.log('Final suggestions:', suggestions);
       setSuggestions(suggestions);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching suggestions:', err);
       setError(err.message);
       setSuggestions([]);
@@ -188,8 +175,6 @@ export function GlobalNav({
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setShowSuggestions(true);
-                  console.log('Input changed:', e.target.value);
-                  console.log('showSuggestions:', true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 className="w-64 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"

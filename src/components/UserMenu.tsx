@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { User, LogOut, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { ErrorMessage } from './ErrorMessage';
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,9 +67,10 @@ export function UserMenu() {
       )}
 
       {error && (
-        <div className="absolute right-0 mt-2 w-64 bg-red-900 text-red-100 text-sm rounded-lg p-3 shadow-lg border border-red-800">
-          {error}
-        </div>
+        <ErrorMessage 
+          message={error} 
+          className="absolute right-0 mt-2 w-64 shadow-lg border border-red-800" 
+        />
       )}
     </div>
   );

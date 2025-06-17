@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
+import { ErrorMessage } from '../components/ErrorMessage';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -104,14 +105,7 @@ export function ForgotPassword() {
           </p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4 flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-medium">{error}</p>
-            </div>
-          </div>
-        )}
+        {error && <ErrorMessage message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -1,58 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Grid3X3, List, TrendingUp, TrendingDown, Search } from 'lucide-react';
-import { useDebounce } from 'use-debounce';
-import { supabase } from '../lib/supabase';
+import { Link, useNavigate } from 'react-router-dom';
+import { Grid3X3, List, Search } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { Pagination } from '../components/Pagination';
-import { usePagination } from '../hooks/usePagination';
 import { getCategoryColor, getCategoryIcon } from '../lib/categoryUtils';
 import { isWithinDays } from '../lib/dateUtils';
 import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
-import type { Brand } from '../types/brand';
+import { useBrandsData } from '../hooks/useBrandsData';
+import { useState, useEffect } from 'react';
 
 export function ExplorePage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const semanticQuery = searchParams.get('semantic');
-  const searchQuery = searchParams.get('search');
-  const [semanticResults, setSemanticResults] = useState<Brand[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState(searchQuery || '');
-  const [debouncedSearchQuery] = useDebounce(searchInput, 300);
-  const [sortBy, setSortBy] = useState<string>('az');
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'All Categories');
-  const [founderFilter, setFounderFilter] = useState(searchParams.get('founderType') || 'All Founder Types');
-  const [typeFilter, setTypeFilter] = useState('All Types');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [productCategories, setProductCategories] = useState<string[]>([]);
-  const [founderTypes, setFounderTypes] = useState<string[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  const { 
-    currentPage, 
-    itemsPerPage, 
-    setCurrentPage, 
+  
+  const {
+    brands,
+    totalItems,
+    loading,
+    productCategories,
+    founderTypes,
+    isAdmin,
+    isAuthenticated,
+    favoriteIds,
+    showFavoritesOnly,
+    setShowFavoritesOnly,
+    searchInput,
+    setSearchInput,
+    sortBy,
+    setSortBy,
+    categoryFilter,
+    setCategoryFilter,
+    founderFilter,
+    setFounderFilter,
+    typeFilter,
+    setTypeFilter,
+    currentPage,
+    itemsPerPage,
+    setCurrentPage,
     setItemsPerPage,
-    resetPagination 
-  } = usePagination(25);
-
-  const clearFilters = () => {
-    setSearchInput('');
-    setSortBy('az');
-    setCategoryFilter('All Categories');
-    setFounderFilter('All Founder Types');
-    setTypeFilter('All Types');
-    resetPagination();
-  };
+    clearFilters,
+    handleFavoriteChange,
+    handleApprove,
+    semanticResults
+  } = useBrandsData();
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -65,234 +56,7 @@ export function ExplorePage() {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  useEffect(() => {
-    if (semanticQuery) {
-      handleSemanticSearch();
-    } else {
-      checkAuth();
-    }
-  }, []);
-
-  useEffect(() => {
-    Promise.all([fetchBrands(), fetchFounderTypes(), fetchProductCategories()]);
-  }, [currentPage, itemsPerPage, showFavoritesOnly, debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, isAdmin]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchFavorites();
-    }
-  }, [isAuthenticated]);
-
-  const handleSemanticSearch = async () => {
-    if (semanticQuery) {
-      try {
-        setError(null);
-        setLoading(true);
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query: semanticQuery })
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `Failed to search: ${response.status}`);
-        }
-
-        const matches = await response.json();
-        setBrands(matches.results || matches);
-        setTotalItems((matches.results || matches).length);
-        checkAuth(); // Still need to check auth for other features
-        return;
-      } catch (err: any) {
-        console.error('Semantic search error:', err);
-        setError(err.message);
-        setLoading(false);
-        return;
-      }
-    }
-  };
-
-  const checkAuth = async () => {
-    setLoading(false);
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('is_admin')
-          .eq('auth_id', user.id)
-          .single();
-        
-        setIsAdmin(!!profile?.is_admin);
-      }
-    } catch (err) {
-      console.error('Auth check failed:', err);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-    }
-  };
-
-  const fetchProductCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('brands')
-        .select('product_category')
-        .eq('approval_status', 'approved')
-        .not('product_category', 'is', null)
-        .order('product_category');
-
-      if (error) throw error;
-
-      const uniqueCategories = Array.from(new Set(data.map(item => item.product_category)))
-        .filter(Boolean)
-        .sort();
-
-      setProductCategories(uniqueCategories);
-    } catch (err) {
-      console.error('Error fetching product categories:', err);
-    }
-  };
-
-  const fetchFounderTypes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('brands')
-        .select('type_of_influencer')
-        .eq('approval_status', 'approved')
-        .not('type_of_influencer', 'is', null)
-        .order('type_of_influencer');
-
-      if (error) throw error;
-
-      const uniqueTypes = Array.from(new Set(data.map(item => item.type_of_influencer)))
-        .filter(Boolean)
-        .sort();
-
-      setFounderTypes(uniqueTypes);
-    } catch (err) {
-      console.error('Error fetching founder types:', err);
-    }
-  };
-
-  const fetchFavorites = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('favorite_brands')
-        .select('brand_id')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setFavoriteIds(data.map(fav => fav.brand_id));
-    } catch (err) {
-      console.error('Error fetching favorites:', err);
-    }
-  };
-
-  const handleApprove = async (brandId: number) => {
-    try {
-      const { error } = await supabase
-        .from('brands')
-        .update({ approval_status: 'approved' })
-        .eq('id', brandId);
-
-      if (error) throw error;
-
-      await fetchBrands();
-    } catch (err) {
-      console.error('Error approving brand:', err);
-    }
-  };
-
-  async function fetchBrands() {
-    try {
-      setLoading(true);
-      let query = supabase
-        .from('brands')
-        .select('*', { count: 'exact' });
-      
-      // Non-admin users can only see approved brands
-      if (!isAdmin) {
-        query = query.eq('approval_status', 'approved');
-      }
-
-      if (debouncedSearchQuery) {
-        // Use more efficient pattern matching
-        const searchPattern = `%${debouncedSearchQuery.toLowerCase()}%`;
-        query = query.or(
-          `lower(name).like.${searchPattern},` +
-          `lower(creators).like.${searchPattern}`
-        );
-      }
-
-      if (categoryFilter !== 'All Categories') {
-        query = query.eq('product_category', categoryFilter);
-      }
-
-      if (founderFilter !== 'All Founder Types') {
-        query = query.eq('type_of_influencer', founderFilter);
-      }
-
-      if (typeFilter !== 'All Types') {
-        query = query.eq('brand_collab', typeFilter === 'Collab');
-      }
-
-      if (showFavoritesOnly && favoriteIds.length > 0) {
-        query = query.in('id', favoriteIds);
-      }
-
-      const sortOptions = [
-        { value: 'az', field: 'name', ascending: true },
-        { value: 'newest', field: 'year_founded', ascending: false },
-        { value: 'oldest', field: 'year_founded', ascending: true }
-      ];
-
-      const selectedSort = sortOptions.find(option => option.value === sortBy) || sortOptions[0];
-      query = query.order(selectedSort.field, { ascending: selectedSort.ascending });
-
-      // Execute query with pagination
-      const start = (currentPage - 1) * itemsPerPage;
-      const end = start + itemsPerPage - 1;
-      
-      const { data, error, count } = await query
-        .range(start, end)
-        .throwOnError();
-
-      if (error) {
-        throw error;
-      }
-
-      setBrands(data || []);
-      setTotalItems(count || 0);
-    } catch (error) {
-      console.error('Error fetching brands:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const handleFavoriteChange = useCallback((brandId: number, isFavorited: boolean) => {
-    setFavoriteIds(prev => 
-      isFavorited 
-        ? [...prev, brandId]
-        : prev.filter(id => id !== brandId)
-    );
-  }, []);
-
-  const getBrandUrl = (brand: Brand) => {
+  const getBrandUrl = (brand: any) => {
     return `/brands/${brand.id}`;
   };
 
@@ -389,27 +153,6 @@ export function ExplorePage() {
             </Button>
           </div>
         </div>
-
-        {semanticQuery && (
-          <div className="mb-6 p-4 bg-teal-900/20 border border-teal-700/50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Search className="w-5 h-5 text-teal-400" />
-              <span className="text-teal-400 font-medium">Semantic Search Results</span>
-            </div>
-            <p className="text-gray-300">
-              Showing brands matching: <span className="font-medium text-gray-100">"{semanticQuery}"</span>
-            </p>
-            <button
-              onClick={() => {
-                navigate('/explore');
-                window.location.reload();
-              }}
-              className="mt-2 text-sm text-teal-400 hover:text-teal-300"
-            >
-              ← Back to all brands
-            </button>
-          </div>
-        )}
 
         {loading ? (
           <div className="text-center py-12">
@@ -515,7 +258,6 @@ export function ExplorePage() {
                         isNew ? 'bg-yellow-900/10' : ''
                       }`}
                       onClick={(e) => {
-                        // Don't navigate if clicking favorite button or approve button
                         if (!(e.target as HTMLElement).closest('button')) {
                           navigate(getBrandUrl(brand));
                         }

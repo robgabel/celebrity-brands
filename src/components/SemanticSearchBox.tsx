@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2 } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import { Button } from './Button';
+import { ErrorMessage } from './ErrorMessage';
 
 interface SearchResult {
   id: number;
@@ -22,7 +23,6 @@ export function SemanticSearchBox() {
   const [showResults, setShowResults] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // Close results when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('.semantic-search-container')) {
@@ -34,10 +34,9 @@ export function SemanticSearchBox() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-search as user types (for preview)
   useEffect(() => {
     if (debouncedSearchQuery.trim() && debouncedSearchQuery.length > 3) {
-      performSearch(false); // Don't navigate, just show preview
+      performSearch(false);
     } else {
       setResults([]);
       setShowResults(false);
@@ -77,7 +76,6 @@ export function SemanticSearchBox() {
       const matches = data.results || [];
       setResults(matches);
 
-      // If this is a form submission (not just preview), navigate to explore page
       if (shouldNavigate) {
         setSearchQuery('');
         setShowResults(false);
@@ -94,7 +92,7 @@ export function SemanticSearchBox() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await performSearch(true); // Navigate to explore page
+    await performSearch(true);
   };
 
   const handleResultClick = (result: SearchResult) => {
@@ -154,9 +152,10 @@ export function SemanticSearchBox() {
       </form>
 
       {error && (
-        <div className="absolute top-16 left-0 right-0 bg-red-900/90 text-red-200 p-3 rounded-lg border border-red-800 z-50">
-          {error}
-        </div>
+        <ErrorMessage 
+          message={error} 
+          className="absolute top-16 left-0 right-0 z-50" 
+        />
       )}
 
       {showResults && results.length > 0 && (

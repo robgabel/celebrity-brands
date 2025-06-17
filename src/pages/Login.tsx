@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
+import { ErrorMessage } from '../components/ErrorMessage';
 import { useAuthStore } from '../stores/authStore';
-import { AlertCircle, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 export function Login() {
   const navigate = useNavigate();
@@ -24,7 +25,6 @@ export function Login() {
     } catch (err: any) {
       console.error('Login error:', err);
       
-      // Enhanced error handling with more specific messages
       if (err.message === 'Invalid login credentials' || err.message.includes('invalid_credentials')) {
         setError('The email or password you entered is incorrect. Please check your credentials and try again.');
         setShowHelp(true);
@@ -38,7 +38,7 @@ export function Login() {
         setError(err.message || 'An unexpected error occurred. Please try again.');
       }
       
-      setPassword(''); // Clear password on error for security
+      setPassword('');
     } finally {
       setIsLoading(false);
     }
@@ -50,22 +50,18 @@ export function Login() {
         <h1 className="text-4xl font-bold mb-8 text-center">Login</h1>
         
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4 flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-medium">{error}</p>
-              {showHelp && (
-                <div className="mt-3 text-sm">
-                  <p className="mb-2">Having trouble logging in?</p>
-                  <ul className="list-disc list-inside space-y-1 text-red-600">
-                    <li>Double-check your email address for typos</li>
-                    <li>Make sure your password is correct (passwords are case-sensitive)</li>
-                    <li>If you don't have an account, <Link to="/signup" className="underline hover:no-underline">sign up here</Link></li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
+          <ErrorMessage message={error} className="mb-4">
+            {showHelp && (
+              <div className="mt-3 text-sm">
+                <p className="mb-2">Having trouble logging in?</p>
+                <ul className="list-disc list-inside space-y-1 text-red-600">
+                  <li>Double-check your email address for typos</li>
+                  <li>Make sure your password is correct (passwords are case-sensitive)</li>
+                  <li>If you don't have an account, <Link to="/signup" className="underline hover:no-underline">sign up here</Link></li>
+                </ul>
+              </div>
+            )}
+          </ErrorMessage>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
