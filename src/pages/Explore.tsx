@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Grid3X3, List, Search } from 'lucide-react';
+import { Grid3X3, List, Search, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { Pagination } from '../components/Pagination';
@@ -95,6 +95,33 @@ export function ExplorePage() {
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="relative search-container mb-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (searchInput.trim()) {
+                navigate(`/explore?search=${encodeURIComponent(searchInput)}`);
+              }
+            }} className="relative">
+              <input
+                type="text"
+                placeholder="Search brands..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full md:w-96 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </form>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
