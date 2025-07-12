@@ -131,11 +131,11 @@ export function HomePage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
-            Discover and Track {totalBrands.toLocaleString()}<br />
-            Celebrity-Owned Brands
+            Discover and Invest* in {totalBrands.toLocaleString()}<br />
+            Celebrity and Creator-owned Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
-            Your comprehensive platform for discovering, tracking, and engaging with brands created by celebrities, creators and influencers.
+            * investing isn't possible yet, but did it get your attention? :)
           </p>
           
           <SemanticSearchBox />
