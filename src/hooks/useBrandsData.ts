@@ -285,16 +285,29 @@ export function useBrandsData(): UseBrandsDataReturn {
   }, []);
 
   useEffect(() => {
+    // This block ensures only one type of search runs
+
     if (semanticQuery) {
+      // If there's a semantic query in the URL, run only the semantic search
       handleSemanticSearch();
     } else {
-      checkAuth();
+      // Otherwise, run the regular keyword/filtered search
+      fetchBrands();
     }
-  }, [semanticQuery, handleSemanticSearch, checkAuth]);
 
-  useEffect(() => {
-    Promise.all([fetchBrands(), fetchFounderTypes(), fetchProductCategories()]);
-  }, [fetchBrands, fetchFounderTypes, fetchProductCategories]);
+    // These can run regardless of the search type
+    checkAuth();
+    fetchFounderTypes();
+    fetchProductCategories();
+
+  }, [
+    semanticQuery,
+    handleSemanticSearch,
+    fetchBrands,
+    checkAuth,
+    fetchFounderTypes,
+    fetchProductCategories
+  ]);
 
   useEffect(() => {
     if (isAuthenticated) {
