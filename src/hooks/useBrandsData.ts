@@ -211,8 +211,8 @@ export function useBrandsData(): UseBrandsDataReturn {
       if (debouncedSearchQuery) {
         const searchPattern = `%${debouncedSearchQuery.toLowerCase()}%`;
         query = query.or(
-          `lower(name).like.${searchPattern},` +
-          `lower(creators).like.${searchPattern}`
+          `name.ilike.${searchPattern},` +
+          `creators.ilike.${searchPattern}`
         );
       }
 
