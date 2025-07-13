@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { GlobalNav } from '../components/GlobalNav';
 import { useAuthStore } from '../stores/authStore';
 import { Info } from 'lucide-react';
 
@@ -45,88 +46,93 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-4xl font-bold mb-8 text-center">Login</h1>
-        
-        {error && (
-          <ErrorMessage message={error} className="mb-4">
-            {showHelp && (
-              <div className="mt-3 text-sm">
-                <p className="mb-2">Having trouble logging in?</p>
-                <ul className="list-disc list-inside space-y-1 text-red-600">
-                  <li>Double-check your email address for typos</li>
-                  <li>Make sure your password is correct (passwords are case-sensitive)</li>
-                  <li>If you don't have an account, <Link to="/signup" className="underline hover:no-underline">sign up here</Link></li>
-                </ul>
-              </div>
+    <div className="min-h-screen bg-gray-900">
+      <GlobalNav />
+      <main className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
+        <div className="w-full max-w-md">
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-gray-700/50">
+            <h1 className="text-4xl font-bold mb-8 text-center text-gray-100">Login</h1>
+            
+            {error && (
+              <ErrorMessage message={error} className="mb-4">
+                {showHelp && (
+                  <div className="mt-3 text-sm">
+                    <p className="mb-2">Having trouble logging in?</p>
+                    <ul className="list-disc list-inside space-y-1 text-red-200">
+                      <li>Double-check your email address for typos</li>
+                      <li>Make sure your password is correct (passwords are case-sensitive)</li>
+                      <li>If you don't have an account, <Link to="/signup" className="underline hover:no-underline text-teal-400 hover:text-teal-300">sign up here</Link></li>
+                    </ul>
+                  </div>
+                )}
+              </ErrorMessage>
             )}
-          </ErrorMessage>
-        )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              autoComplete="email"
-              disabled={isLoading}
-            />
-          </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                  autoComplete="email"
+                  disabled={isLoading}
+                />
+              </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              autoComplete="current-password"
-              disabled={isLoading}
-            />
-          </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                />
+              </div>
 
-          <Button type="submit" isLoading={isLoading} className="w-full">
-            {isLoading ? 'Signing in...' : 'Login'}
-          </Button>
-        </form>
+              <Button type="submit" isLoading={isLoading} className="w-full">
+                {isLoading ? 'Signing in...' : 'Login'}
+              </Button>
+            </form>
 
-        <div className="mt-6 space-y-4">
-            <p className="text-center text-gray-600">
-              <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
-                Forgot your password?
-              </Link>
-            </p>
+            <div className="mt-6 space-y-4">
+                <p className="text-center text-gray-400">
+                  <Link to="/forgot-password" className="text-teal-400 hover:text-teal-300 font-medium">
+                    Forgot your password?
+                  </Link>
+                </p>
 
-            <p className="text-center text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
-                Sign up
-              </Link>
-            </p>
+                <p className="text-center text-gray-400">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="text-teal-400 hover:text-teal-300 font-medium">
+                    Sign up
+                  </Link>
+                </p>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">New to the platform?</p>
-                <p>Create an account to save your favorite brands, set goals, and get personalized recommendations.</p>
+              <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-200">
+                    <p className="font-medium mb-1">New to the platform?</p>
+                    <p>Create an account to save your favorite brands, set goals, and get personalized recommendations.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
