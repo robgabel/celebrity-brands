@@ -76,10 +76,13 @@ export function SemanticSearchBox() {
       const matches = data.results || [];
       setResults(matches);
 
-      if (shouldNavigate) {
+      if (shouldNavigate && matches.length > 0) {
         setSearchQuery('');
         setShowResults(false);
         navigate(`/explore?semantic=${encodeURIComponent(searchQuery.trim())}`);
+      } else if (shouldNavigate && matches.length === 0) {
+        // Keep on homepage but show no results message
+        setShowResults(true);
       }
     } catch (err: any) {
       console.error('Search error:', err);
@@ -208,9 +211,29 @@ export function SemanticSearchBox() {
 
       {showResults && results.length === 0 && !isSearching && searchQuery.trim() && (
         <div className="absolute top-16 left-0 right-0 bg-gray-800 rounded-lg border border-gray-700 shadow-xl p-4 z-50">
-          <p className="text-gray-400 text-center">
-            No brands found matching "{searchQuery}". Try different keywords or browse all brands.
+          <p className="text-gray-400 text-center mb-4">
+            No brands found matching "{searchQuery}".
           </p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setShowResults(false);
+              }}
+              className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+            >
+              Try Different Search
+            </button>
+            <button
+              onClick={() => {
+                setShowResults(false);
+                navigate('/explore');
+              }}
+              className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+            >
+              Browse All Brands
+            </button>
+          </div>
         </div>
       )}
     </div>

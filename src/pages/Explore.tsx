@@ -3,6 +3,7 @@ import { Grid3X3, List, Search, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { Pagination } from '../components/Pagination';
+import { SemanticSearchBox } from '../components/SemanticSearchBox';
 import { getCategoryColor, getCategoryIcon } from '../lib/categoryUtils';
 import { isWithinDays } from '../lib/dateUtils';
 import { GlobalNav } from '../components/GlobalNav';
@@ -12,6 +13,8 @@ import { useState, useEffect } from 'react';
 
 export function ExplorePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const semanticQuery = searchParams.get('semantic');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   
   const {
@@ -97,31 +100,31 @@ export function ExplorePage() {
             </div>
           </div>
 
-          <div className="relative search-container mb-4">
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (searchInput.trim()) {
-                navigate(`/explore?search=${encodeURIComponent(searchInput)}`);
-              }
-            }} className="relative">
-              <input
-                type="text"
-                placeholder="Search brands..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full md:w-96 pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-200 placeholder-gray-500"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => setSearchInput('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </form>
+          <div className="mb-4">
+            {semanticQuery ? (
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">Semantic search results for:</p>
+                    <p className="text-gray-200 font-medium">"{semanticQuery}"</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigate('/explore');
+                      window.location.reload();
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Clear Search
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="relative search-container">
+                <SemanticSearchBox />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -175,6 +178,7 @@ export function ExplorePage() {
               variant="secondary"
               onClick={clearFilters}
               className="flex items-center gap-1"
+              disabled={!!semanticQuery}
             >
               Clear
             </Button>

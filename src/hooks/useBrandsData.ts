@@ -70,13 +70,16 @@ export function useBrandsData(): UseBrandsDataReturn {
   } = usePagination(25);
 
   const clearFilters = useCallback(() => {
+    // Don't clear filters if we're in semantic search mode
+    if (semanticQuery) return;
+    
     setSearchInput('');
     setSortBy('az');
     setCategoryFilter('All Categories');
     setFounderFilter('All Founder Types');
     setTypeFilter('All Types');
     resetPagination();
-  }, [resetPagination]);
+  }, [resetPagination, semanticQuery]);
 
   const checkAuth = useCallback(async () => {
     setLoading(false);
