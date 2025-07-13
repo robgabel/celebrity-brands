@@ -40,6 +40,7 @@ export function HomePage() {
           .select('*')
           .eq('approval_status', 'approved')
           .is('year_discontinued', null)
+          .eq('brand_collab', false)
           .order('id', { ascending: false })
           .limit(20);
           
