@@ -9,6 +9,7 @@ import { GlobalNav } from '../components/GlobalNav';
 import { Footer } from '../components/Footer';
 import { SemanticSearchBox } from '../components/SemanticSearchBox';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { BrandStoryDebugger } from '../components/BrandStoryDebugger';
 import type { Brand } from '../types/brand';
 
 export function HomePage() {
@@ -258,6 +259,10 @@ export function HomePage() {
           </section>
         )}
       </div>
+      
+      {/* Debug component - remove after testing */}
+      <BrandStoryDebugger />
+      
       <Footer />
     </div>
   ); 
