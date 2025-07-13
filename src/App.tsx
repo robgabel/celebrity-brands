@@ -11,6 +11,7 @@ import { AdminGuard } from './components/AdminGuard';
 import { AgentBossControlCenter } from './pages/AgentBossControlCenter';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { SuggestBrand } from './pages/SuggestBrand';
 
 function App() {
   const initialize = useAuthStore(state => state.initialize);
