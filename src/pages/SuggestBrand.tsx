@@ -7,8 +7,10 @@ import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
 
 export function SuggestBrand() {
+  const { user } = useAuthStore();
   const [formData, setFormData] = useState({
     brand_name: '',
     creators: '',
@@ -41,9 +43,13 @@ export function SuggestBrand() {
     }
 
     try {
+      // Get user ID if authenticated, otherwise null for anonymous submissions
+      const userId = user?.id || null;
+
       const { error: submitError } = await supabase
         .from('brand_suggestions')
         .insert([{
+          user_id: userId,
           brand_name: formData.brand_name.trim(),
           creators: formData.creators.trim(),
           is_collab: formData.is_collab,
