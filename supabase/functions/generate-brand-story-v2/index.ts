@@ -112,7 +112,6 @@ Respond with a JSON object containing:
       }
       throw new Error(errorMessage);
     }
-    }
 
     const completion = await openAIResponse.json();
     
