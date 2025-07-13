@@ -224,21 +224,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
+        // Check if user profile already exists
+        const { data: existingProfile } = await supabase
           .from('user_profiles')
-          .insert({
-            auth_id: data.user.id,
-            email: data.user.email,
-            first_name: metadata?.firstName || null,
-            last_name: metadata?.lastName || null,
-            company: metadata?.company || null,
-            is_admin: false
-          });
+          .select('id')
+          .eq('auth_id', data.user.id)
+          .single();
 
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          // Don't throw here as the user was created successfully
+        // Only create profile if it doesn't exist
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .insert({
+              auth_id: data.user.id,
+              email: data.user.email,
+              first_name: metadata?.firstName || null,
+              last_name: metadata?.lastName || null,
+              company: metadata?.company || null,
+              is_admin: false
+            });
+
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            // Don't throw here as the user was created successfully
+          }
         }
 
         // If user is confirmed immediately, set auth state
