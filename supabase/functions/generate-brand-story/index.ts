@@ -80,12 +80,11 @@ Respond with a JSON object containing:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        response_format: { type: "json_object" },
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys.',
+            content: 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
           },
           {
             role: 'user',

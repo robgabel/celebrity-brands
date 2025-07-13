@@ -85,11 +85,10 @@ Respond with a JSON object containing:
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: 'You are a brand storyteller specializing in inspirational "Zero to Hero" narratives that highlight transformative journeys and breakthrough moments.',
+            content: 'You are a brand storyteller specializing in inspirational "Zero to Hero" narratives that highlight transformative journeys and breakthrough moments. Always respond with valid JSON only.',
           },
           {
             role: 'user',
