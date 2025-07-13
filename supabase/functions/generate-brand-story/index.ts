@@ -120,6 +120,16 @@ Respond with a JSON object containing:
     const storyContent = JSON.parse(content);
 
     // Update brand story in database
+    console.log('Attempting to update brand_story for brandId:', brandId);
+    console.log('Story content being saved (first 200 chars):', JSON.stringify(storyContent).substring(0, 200) + '...');
+    console.log('Full story content structure:', {
+      hasStory: !!storyContent.story,
+      hasKeyEvents: !!storyContent.key_events,
+      hasMetrics: !!storyContent.metrics,
+      storyLength: storyContent.story?.length || 0,
+      keyEventsCount: storyContent.key_events?.length || 0
+    });
+    
     const { error: updateError } = await supabaseClient
       .from('brands')
       .update({
@@ -129,7 +139,17 @@ Respond with a JSON object containing:
       .eq('id', brandId);
 
     if (updateError) {
-      throw new Error('Failed to update brand story');
+      console.error('Supabase update error:', updateError);
+      console.error('Update error details:', {
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code
+      });
+      throw new Error('Failed to update brand story: ' + updateError.message);
+    } else {
+      console.log('Brand story updated successfully for brandId:', brandId);
+      console.log('Update timestamp:', new Date().toISOString());
     }
 
     return new Response(JSON.stringify(storyContent), {
