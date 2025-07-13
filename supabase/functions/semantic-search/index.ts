@@ -15,23 +15,36 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Semantic search function started.'); // Log start
+    console.log('🚀 Semantic search function started');
 
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAiKey = Deno.env.get('OPENAI_API_KEY');
 
-    console.log(`Env vars check: Supabase URL present: ${!!supabaseUrl}, Supabase Key present: ${!!supabaseKey}, OpenAI Key present: ${!!openAiKey}`); // Log env var status
+    console.log('🔧 Environment check:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseKey: !!supabaseKey,
+      openAiKey: !!openAiKey
+    });
 
     if (!supabaseUrl || !supabaseKey || !openAiKey) {
+      console.error('❌ Missing environment variables');
       throw new Error('Missing required environment variables');
     }
 
-    const body = await req.json().catch(() => null);
-    console.log('Request body received:', body); // Log request body
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+      console.log('📥 Request body received:', body);
+    } catch (e) {
+      console.error('❌ Failed to parse request body:', e);
+      throw new Error('Invalid JSON in request body');
+    }
 
     if (!body || !body.query) {
+      console.error('❌ No query provided in request');
       return new Response(
         JSON.stringify({ 
           error: 'Search query is required' 
@@ -46,38 +59,54 @@ Deno.serve(async (req) => {
     }
 
     const { query } = body;
-    console.log('Query received:', query); // Log the query
+    console.log('🔍 Search query:', query);
 
     // Generate embedding for search query using OpenAI API directly
-    console.log('Calling OpenAI API for embedding...'); // Log before OpenAI call
-    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: query,
-        encoding_format: 'float',
-      }),
-    });
+    console.log('🤖 Calling OpenAI API for embedding...');
+    
+    let embeddingResponse;
+    try {
+      embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-3-small',
+          input: query,
+          encoding_format: 'float',
+        }),
+      });
+      console.log('🤖 OpenAI response status:', embeddingResponse.status);
+    } catch (e) {
+      console.error('❌ OpenAI fetch error:', e);
+      throw new Error(`OpenAI API request failed: ${e.message}`);
+    }
 
     if (!embeddingResponse.ok) {
       const errorText = await embeddingResponse.text();
-      console.error('OpenAI API error response:', errorText); // Log OpenAI error response
+      console.error('❌ OpenAI API error response:', errorText);
       throw new Error(`OpenAI API error: ${embeddingResponse.status} ${embeddingResponse.statusText}`);
     }
 
-    const embeddingData = await embeddingResponse.json();
-    console.log('OpenAI embedding data received (first 5 values):', embeddingData.data?.[0]?.embedding?.slice(0, 5)); // Log part of embedding
-    console.log('Embedding length:', embeddingData.data?.[0]?.embedding?.length); // Log embedding length
+    let embeddingData;
+    try {
+      embeddingData = await embeddingResponse.json();
+      console.log('🤖 OpenAI embedding received, length:', embeddingData.data?.[0]?.embedding?.length);
+      console.log('🤖 First 5 embedding values:', embeddingData.data?.[0]?.embedding?.slice(0, 5));
+    } catch (e) {
+      console.error('❌ Failed to parse OpenAI response:', e);
+      throw new Error('Failed to parse OpenAI response');
+    }
 
     if (!embeddingData.data?.[0]?.embedding) {
+      console.error('❌ No embedding in OpenAI response');
       throw new Error('Failed to generate query embedding');
     }
 
     // Initialize Supabase client
+    console.log('🗄️ Initializing Supabase client...');
     const supabaseClient = createClient(
       supabaseUrl,
       supabaseKey,
@@ -90,25 +119,42 @@ Deno.serve(async (req) => {
     );
 
     // Perform similarity search
-    console.log('Calling Supabase RPC match_brands with threshold 0.5 and count 10...'); // Log before Supabase RPC call
-    const { data: matches, error: searchError } = await supabaseClient.rpc(
-      'match_brands',
-      {
-        query_embedding: embeddingData.data[0].embedding,
-        match_threshold: 0.5,
-        match_count: 10
-      }
-    );
+    console.log('🔍 Calling match_brands RPC function...');
+    console.log('🔍 Parameters:', {
+      embedding_length: embeddingData.data[0].embedding.length,
+      match_threshold: 0.5,
+      match_count: 10
+    });
 
-    console.log('RPC call completed. Error:', searchError, 'Matches count:', matches?.length); // Log RPC results
+    let matches, searchError;
+    try {
+      const result = await supabaseClient.rpc(
+        'match_brands',
+        {
+          query_embedding: embeddingData.data[0].embedding,
+          match_threshold: 0.5,
+          match_count: 10
+        }
+      );
+      matches = result.data;
+      searchError = result.error;
+      
+      console.log('🔍 RPC call completed');
+      console.log('🔍 Error:', searchError);
+      console.log('🔍 Matches count:', matches?.length);
+      console.log('🔍 First match:', matches?.[0]);
+    } catch (e) {
+      console.error('❌ RPC call failed:', e);
+      throw new Error(`Database search failed: ${e.message}`);
+    }
 
     if (searchError) {
-      console.error('Database search error:', searchError);
-      throw new Error('Failed to search database');
+      console.error('❌ Database search error:', searchError);
+      throw new Error(`Database search error: ${searchError.message}`);
     }
 
     if (!matches) {
-      console.log('No matches returned from RPC call');
+      console.log('⚠️ No matches returned from RPC call');
       return new Response(
         JSON.stringify({ 
           results: [] 
@@ -121,7 +167,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Semantic search function finished successfully with', matches.length, 'results'); // Log success
+    console.log('✅ Semantic search completed successfully');
+    console.log('✅ Returning', matches.length, 'results');
+    
     return new Response(
       JSON.stringify({
         results: matches,
@@ -134,7 +182,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Semantic search function caught error:', error); // Log caught errors
+    console.error('💥 Semantic search function error:', error);
 
     // Return a structured error response
     return new Response(
