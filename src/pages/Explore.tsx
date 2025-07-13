@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Grid3X3, List, Search, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FavoriteButton } from '../components/FavoriteButton';
