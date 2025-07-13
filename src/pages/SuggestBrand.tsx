@@ -14,7 +14,6 @@ export function SuggestBrand() {
   const [formData, setFormData] = useState({
     brand_name: '',
     creators: '',
-    year_founded: '',
     is_collab: false,
     comments: '',
     email: ''
@@ -37,7 +36,7 @@ export function SuggestBrand() {
     setIsSubmitting(true);
 
     // Validate required fields
-    if (!formData.brand_name.trim() || !formData.creators.trim() || !formData.year_founded.trim()) {
+    if (!formData.brand_name.trim() || !formData.creators.trim()) {
       setError('Please fill in all required fields.');
       setIsSubmitting(false);
       return;
@@ -47,21 +46,12 @@ export function SuggestBrand() {
       // Get user ID if authenticated, otherwise null for anonymous submissions
       const userId = user?.id || null;
       
-      // Parse year_founded as integer
-      const yearFounded = parseInt(formData.year_founded.trim());
-      if (isNaN(yearFounded) || yearFounded < 1800 || yearFounded > new Date().getFullYear()) {
-        setError('Please enter a valid founding year between 1800 and current year.');
-        setIsSubmitting(false);
-        return;
-      }
-
       const { error: submitError } = await supabase
         .from('brand_suggestions')
         .insert([{
           user_id: userId,
           brand_name: formData.brand_name.trim(),
           creators: formData.creators.trim(),
-          year_founded: yearFounded,
           is_collab: formData.is_collab,
           comments: formData.comments.trim() || null,
           email: formData.email.trim() || null,
@@ -179,24 +169,6 @@ export function SuggestBrand() {
               />
             </div>
 
-            <div>
-              <label htmlFor="year_founded" className="block text-sm font-medium text-gray-300 mb-2">
-                Year Founded <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="number"
-                id="year_founded"
-                name="year_founded"
-                value={formData.year_founded}
-                onChange={handleInputChange}
-                min="1800"
-                max={new Date().getFullYear()}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="e.g., 2020"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
 
             <div>
               <label className="flex items-center space-x-3">
