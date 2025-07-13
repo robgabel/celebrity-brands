@@ -203,5 +203,64 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       console.error('Error refreshing profile:', error);
       // Don't throw here, just log the error
     }
+  },
+
+  signUp: async (email: string, password: string, metadata?: { firstName?: string; lastName?: string; company?: string }) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: metadata?.firstName || '',
+            last_name: metadata?.lastName || '',
+            company: metadata?.company || ''
+          }
+        }
+      });
+
+      if (error) {
+        handleSupabaseError(error, 'sign up');
+      }
+
+      if (data.user) {
+        // Create user profile
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            auth_id: data.user.id,
+            email: data.user.email,
+            first_name: metadata?.firstName || null,
+            last_name: metadata?.lastName || null,
+            company: metadata?.company || null,
+            is_admin: false
+          });
+
+        if (profileError) {
+          console.error('Error creating user profile:', profileError);
+          // Don't throw here as the user was created successfully
+        }
+
+        // If user is confirmed immediately, set auth state
+        if (data.user.email_confirmed_at) {
+          const profile = await safeSupabaseOperation(
+            () => supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('auth_id', data.user.id)
+              .single(),
+            'fetch user profile after signup'
+          );
+
+          set({
+            isAuthenticated: true,
+            isAdmin: profile?.is_admin || false,
+            profile: profile || null
+          });
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 }));
