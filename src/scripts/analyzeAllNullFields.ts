@@ -22,8 +22,8 @@ async function analyzeAllNullFields() {
     const { data: brandsNeedingAnalysis, error: fetchError } = await supabase
       .from('brands')
       .select('id, name, creators, description, product_category, type_of_influencer')
-      .or('product_category.is.null,type_of_influencer.is.null')
-      .eq('approval_status', 'approved');
+      .or('product_category.is.null,type_of_influencer.is.null');
+      // Removed approval_status filter to include all brands
 
     if (fetchError) {
       throw new Error(`Failed to fetch brands: ${fetchError.message}`);
