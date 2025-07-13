@@ -135,6 +135,16 @@ Only return the JSON array, no other text.`;
       throw new Error('Expected array of candidate brands');
     }
 
+    // Check if no brands were found and return appropriate message
+    if (candidates.length === 0) {
+      return new Response(JSON.stringify({
+        message: "I cannot find any more celebrity or creator brands not already in our database that match your research criteria. You may want to try different search terms or expand your criteria.",
+        results: []
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     return new Response(JSON.stringify(candidates), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

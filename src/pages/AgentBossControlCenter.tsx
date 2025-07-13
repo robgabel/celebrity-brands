@@ -64,6 +64,15 @@ export function AgentBossControlCenter() {
       }
 
       const data = await response.json();
+      
+      // Handle case where no results are found
+      if (data.message && data.results) {
+        setCandidates([]);
+        setPetraError(data.message);
+        setPetraStatus('ready');
+        return;
+      }
+      
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format from server');
       }
