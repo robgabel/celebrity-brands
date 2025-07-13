@@ -172,7 +172,6 @@ Respond with a JSON object containing:
         }
       }
     }
-    }
 
     return new Response(JSON.stringify(storyContent), {
       headers: {
