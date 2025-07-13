@@ -29,6 +29,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/suggest-brand" element={<SuggestBrand />} />
         <Route 
           path="/admin/agent-boss-control-center" 
           element={

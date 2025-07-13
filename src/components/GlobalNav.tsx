@@ -162,6 +162,12 @@ export function GlobalNav({
             >
               Explore
             </Link>
+            <Link 
+              to="/suggest-brand" 
+              className="text-gray-300 hover:text-gray-100 transition-colors"
+            >
+              Suggest a Brand
+            </Link>
           </nav>
         </div>
 
