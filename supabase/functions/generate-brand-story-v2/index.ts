@@ -85,6 +85,7 @@ Respond with a JSON object containing:
       },
       body: JSON.stringify({
         model: 'gpt-4o',
+        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
