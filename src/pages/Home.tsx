@@ -39,10 +39,19 @@ export function HomePage() {
           .from('brands')
           .select('*')
           .eq('approval_status', 'approved')
-          .limit(4);
+          .is('year_discontinued', null)
+          .order('id', { ascending: false })
+          .limit(20);
           
         if (featuredError) throw featuredError;
-        setFeaturedBrands(featuredData || []);
+        
+        // Randomly select 4 brands from the results
+        if (featuredData && featuredData.length > 0) {
+          const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
+          setFeaturedBrands(shuffled.slice(0, 4));
+        } else {
+          setFeaturedBrands([]);
+        }
         
         const { data: recentData, error: recentError } = await supabase
           .from('brands')
