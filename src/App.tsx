@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { HomePage } from './pages/Home';
 import { ExplorePage } from './pages/Explore';
 import { Login } from './pages/Login';
@@ -52,7 +53,6 @@ function App() {
     </Router>
   );
 }
-import { useEffect } from 'react';
 
 
 export default App
