@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:scripts": "tsc src/scripts/*.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext --target ES2022 --esModuleInterop --allowSyntheticDefaultImports",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "generate-embeddings": "tsc src/scripts/generateEmbeddings.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext && node dist/scripts/generateEmbeddings.js",
