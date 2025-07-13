@@ -150,6 +150,23 @@ Respond with a JSON object containing:
     } else {
       console.log('Brand story updated successfully for brandId:', brandId);
       console.log('Update timestamp:', new Date().toISOString());
+      
+      // Verify the update by fetching the brand again
+      const { data: verifyBrand, error: verifyError } = await supabaseClient
+        .from('brands')
+        .select('brand_story, last_story_update')
+        .eq('id', brandId)
+        .single();
+      
+      if (verifyError) {
+        console.error('Error verifying update:', verifyError);
+      } else {
+        console.log('Verification - brand_story exists:', !!verifyBrand?.brand_story);
+        console.log('Verification - last_story_update:', verifyBrand?.last_story_update);
+        if (verifyBrand?.brand_story) {
+          console.log('Verification - story content length:', JSON.stringify(verifyBrand.brand_story).length);
+        }
+      }
     }
 
     return new Response(JSON.stringify(storyContent), {
