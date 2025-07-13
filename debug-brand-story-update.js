@@ -122,27 +122,31 @@ async function debugBrandStoryUpdate() {
       console.log('❌ FAILURE: brand_story is still NULL');
     }
     
-    // 5. Check database schema for brand_story column
-    console.log('\n5. Checking database schema...');
-    const { data: schemaInfo, error: schemaError } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT 
-            column_name, 
-            data_type, 
-            is_nullable,
-            column_default
-          FROM information_schema.columns 
-          WHERE table_name = 'brands' 
-          AND column_name IN ('brand_story', 'last_story_update')
-          ORDER BY column_name;
-        `
-      });
+    // 5. Test with different data types
+    console.log('\n5. Testing with string instead of object...');
+    const { error: stringUpdateError } = await supabase
+      .from('brands')
+      .update({
+        brand_story: JSON.stringify(testStory)
+      })
+      .eq('id', brandId);
     
-    if (schemaError) {
-      console.error('❌ Schema check failed:', schemaError);
+    if (stringUpdateError) {
+      console.error('❌ String update failed:', stringUpdateError);
     } else {
-      console.log('📋 Schema info:', schemaInfo);
+      console.log('✅ String update succeeded');
+      
+      // Verify string update
+      const { data: stringVerify } = await supabase
+        .from('brands')
+        .select('brand_story')
+        .eq('id', brandId)
+        .single();
+      
+      console.log('📊 String update result:', {
+        has_brand_story: !!stringVerify?.brand_story,
+        type: typeof stringVerify?.brand_story
+      });
     }
     
   } catch (error) {
