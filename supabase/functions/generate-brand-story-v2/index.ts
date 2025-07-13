@@ -101,7 +101,17 @@ Respond with a JSON object containing:
     });
 
     if (!openAIResponse.ok) {
-      throw new Error('Failed to generate brand story');
+      const errorText = await openAIResponse.text();
+      let errorMessage = `OpenAI API error: ${openAIResponse.status} ${openAIResponse.statusText}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+      } catch {
+        // Use errorText as is if JSON parsing fails
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
     }
 
     const completion = await openAIResponse.json();

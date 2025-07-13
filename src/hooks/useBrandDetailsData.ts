@@ -217,7 +217,7 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
       await fetchBrandDetails();
     } catch (err: any) {
       console.error('Error generating brand story:', err);
-      setStoryError(err.message || 'Failed to generate brand story');
+      setStoryError(err.error || err.message || 'Failed to generate brand story');
     } finally {
       setIsGeneratingStory(false);
     }
