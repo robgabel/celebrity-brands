@@ -55,17 +55,29 @@ export function SemanticSearchBox() {
     setShowResults(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ query: searchQuery.trim() })
+      let response;
+      try {
+        response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query: searchQuery.trim() }),
+            signal: AbortSignal.timeout(30000) // 30 second timeout
+          }
+        );
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
         }
-      );
+        if (fetchError.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to search service. Please check your internet connection and try again.');
+        }
+        throw new Error(`Network error: ${fetchError.message}`);
+      }
 
       if (!response.ok) {
         const error = await response.json();

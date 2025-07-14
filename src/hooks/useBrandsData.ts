@@ -177,17 +177,29 @@ export function useBrandsData(): UseBrandsDataReturn {
           throw new Error('Supabase configuration is missing. Please check your environment variables.');
         }
         
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/semantic-search`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${supabaseAnonKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query: semanticQuery })
+        let response;
+        try {
+          response = await fetch(
+            `${supabaseUrl}/functions/v1/semantic-search`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ query: semanticQuery }),
+              signal: AbortSignal.timeout(30000) // 30 second timeout
+            }
+          );
+        } catch (fetchError: any) {
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Request timed out. Please try again.');
           }
-        );
+          if (fetchError.message === 'Failed to fetch') {
+            throw new Error('Unable to connect to search service. Please check your internet connection and try again.');
+          }
+          throw new Error(`Network error: ${fetchError.message}`);
+        }
 
         if (!response.ok) {
           const error = await response.json();
