@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Grid3X3, List, Search, X } from 'lucide-react';
+import { Grid3X3, List, Search, X, Sparkles, Info } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { Pagination } from '../components/Pagination';
@@ -15,6 +15,7 @@ export function ExplorePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const semanticQuery = searchParams.get('semantic');
+  const isSemanticSearch = !!semanticQuery;
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   
   const {
@@ -48,6 +49,20 @@ export function ExplorePage() {
     semanticResults
   } = useBrandsData();
 
+  // Helper function to get match percentage color
+  const getMatchColor = (similarity: number) => {
+    const percentage = Math.round(similarity * 100);
+    if (percentage >= 80) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    if (percentage >= 60) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    if (percentage >= 40) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+  };
+
+  // Helper function to format match percentage
+  const formatMatchPercentage = (similarity: number) => {
+    return `${Math.round(similarity * 100)}%`;
+  };
+
   useEffect(() => {
     const checkScreenSize = () => {
       const isMobileView = window.innerWidth < 768;
@@ -75,10 +90,29 @@ export function ExplorePage() {
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-gray-100">
-                Explore Celebrity & Creator Brands
-              </h1>
-              <p className="text-gray-400">Showing {totalItems} brands</p>
+              {isSemanticSearch ? (
+                <div className="bg-gradient-to-r from-teal-500/10 via-blue-500/10 to-purple-500/10 rounded-lg p-4 border border-teal-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-5 h-5 text-teal-400" />
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-100">
+                      AI Search Results
+                    </h1>
+                  </div>
+                  <p className="text-gray-300 mb-1">
+                    Searching for: <span className="font-medium text-teal-400">"{semanticQuery}"</span>
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Found {totalItems} brands ranked by AI relevance
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-gray-100">
+                    Explore Celebrity & Creator Brands
+                  </h1>
+                  <p className="text-gray-400">Showing {totalItems} brands</p>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <div className="flex gap-1 border border-gray-700 rounded-lg bg-gray-800">
@@ -101,19 +135,22 @@ export function ExplorePage() {
           </div>
 
           <div className="mb-4">
-            {semanticQuery ? (
+            {isSemanticSearch ? (
               <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">Semantic search results for:</p>
-                    <p className="text-gray-200 font-medium">"{semanticQuery}"</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm font-medium text-blue-400">Sorted by AI Relevance</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Results are ranked by semantic similarity to your search query</p>
                   </div>
                   <button
                     onClick={() => {
                       navigate('/explore');
                       window.location.reload();
                     }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-900/20 hover:bg-red-800/30 text-red-300 rounded-lg transition-colors border border-red-700/30"
                   >
                     <X className="w-4 h-4" />
                     Clear Search
@@ -127,7 +164,8 @@ export function ExplorePage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {!isSemanticSearch && (
+            <div className="flex flex-wrap items-center gap-2">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -182,7 +220,8 @@ export function ExplorePage() {
             >
               Clear
             </Button>
-          </div>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -200,7 +239,15 @@ export function ExplorePage() {
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Brand</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[20%]">Creators</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Category</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[42%]">Description</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[35%]">Description</th>
+                      {isSemanticSearch && (
+                        <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[7%]">
+                          <div className="flex items-center justify-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            Match
+                          </div>
+                        </th>
+                      )}
                       <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[8%]">Actions</th>
                     </tr>
                   </thead>
@@ -253,6 +300,18 @@ export function ExplorePage() {
                               {brand.description}
                             </div>
                           </td>
+                          {isSemanticSearch && (
+                            <td className="px-3 py-4">
+                              <div className="flex justify-center">
+                                <span 
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getMatchColor((brand as any).similarity || 0)}`}
+                                  title={`${formatMatchPercentage((brand as any).similarity || 0)} semantic match`}
+                                >
+                                  {formatMatchPercentage((brand as any).similarity || 0)}
+                                </span>
+                              </div>
+                            </td>
+                          )}
                           <td className="px-3 py-4">
                             <div className="flex items-center justify-center space-x-2">
                               <FavoriteButton
@@ -300,7 +359,7 @@ export function ExplorePage() {
                             <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${categoryColors.bg} ${categoryColors.text}`}>
                               <Icon className="w-5 h-5" />
                             </div>
-                            <div className="relative">
+                            <div className="relative flex-1">
                               <span className="text-lg font-medium text-gray-100 group-hover:text-teal-400 truncate">
                                 {brand.name}
                               </span>
@@ -317,6 +376,17 @@ export function ExplorePage() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
+                            {isSemanticSearch && (
+                              <div className="relative">
+                                <span 
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getMatchColor((brand as any).similarity || 0)}`}
+                                  title={`${formatMatchPercentage((brand as any).similarity || 0)} semantic match`}
+                                >
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  {formatMatchPercentage((brand as any).similarity || 0)}
+                                </span>
+                              </div>
+                            )}
                             <FavoriteButton
                               brandId={brand.id}
                               initialFavorited={favoriteIds.includes(brand.id)}
@@ -354,14 +424,16 @@ export function ExplorePage() {
               </div>
             )}
             
-            <Pagination
+            {!isSemanticSearch && (
+              <Pagination
               currentPage={currentPage}
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               onItemsPerPageChange={setItemsPerPage}
               isLoading={loading}
-            />
+              />
+            )}
           </>
         )}
       </main>

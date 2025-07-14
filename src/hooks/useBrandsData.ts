@@ -209,6 +209,7 @@ export function useBrandsData(): UseBrandsDataReturn {
         const matches = await response.json();
         setBrands(matches.results || matches);
         setTotalItems((matches.results || matches).length);
+        setSemanticResults(matches.results || matches);
         checkAuth();
         return;
       } catch (err: any) {
