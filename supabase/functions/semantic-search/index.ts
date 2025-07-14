@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       supabaseKey,
       {
         auth: {
-        match_threshold: 0,
+          autoRefreshToken: false,
           persistSession: false,
         },
       }
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     console.log('🔍 Calling match_brands RPC function...');
     console.log('🔍 Parameters:', {
       embedding_length: embeddingData.data[0].embedding.length,
-      match_threshold: 0.5,
+      match_threshold: 0.0,
       match_count: 10
     });
 
