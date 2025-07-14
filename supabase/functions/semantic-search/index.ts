@@ -169,6 +169,7 @@ Deno.serve(async (req) => {
 
     console.log('✅ Semantic search completed successfully');
     console.log('✅ Returning', matches.length, 'results');
+    console.log('🔍 All matches:', JSON.stringify(matches, null, 2));
     
     return new Response(
       JSON.stringify({
