@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       supabaseKey,
       {
         auth: {
-          autoRefreshToken: false,
+        match_threshold: 0,
           persistSession: false,
         },
       }
