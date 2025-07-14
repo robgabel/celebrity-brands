@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
         'match_brands',
         {
           query_embedding: embeddingData.data[0].embedding,
-          match_threshold: 0.5,
+          match_threshold: 0.0,
           match_count: 10
         }
       );
