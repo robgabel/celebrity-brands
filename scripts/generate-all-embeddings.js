@@ -61,8 +61,11 @@ async function generateEmbeddingForBrand(brandId) {
 function isZeroEmbedding(embedding) {
   if (!embedding || !Array.isArray(embedding)) return true;
   
-  // Check if all values are 0
-  return embedding.every(value => value === 0);
+  // Check if all values are exactly 0 (handle both numbers and strings)
+  return embedding.every(value => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return num === 0;
+  });
 }
 
 async function generateAllEmbeddings() {
