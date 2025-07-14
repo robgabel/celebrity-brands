@@ -169,12 +169,20 @@ export function useBrandsData(): UseBrandsDataReturn {
       try {
         setError(null);
         setLoading(true);
+        
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Supabase configuration is missing. Please check your environment variables.');
+        }
+        
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/semantic-search`,
+          `${supabaseUrl}/functions/v1/semantic-search`,
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${supabaseAnonKey}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ query: semanticQuery })
