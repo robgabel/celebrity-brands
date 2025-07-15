@@ -246,21 +246,36 @@ Deno.serve(async (req) => {
     // Test 2: Check how many brands have embeddings
     console.log('🧪 Checking brands with embeddings...');
     try {
+      // Use direct RPC call to bypass RLS for service role
       const embeddingCountResult = await supabaseClient
         .from('brands')
         .select('id, name, embedding')
+        .eq('approval_status', 'approved')
         .not('embedding', 'is', null)
         .limit(5);
       
       console.log('🧪 Brands with embeddings:', {
         error: embeddingCountResult.error?.message,
+        errorCode: embeddingCountResult.error?.code,
+        errorDetails: embeddingCountResult.error?.details,
         count: embeddingCountResult.data?.length,
         firstBrand: embeddingCountResult.data?.[0] ? {
           id: embeddingCountResult.data[0].id,
           name: embeddingCountResult.data[0].name,
-          hasEmbedding: !!embeddingCountResult.data[0].embedding
+          hasEmbedding: !!embeddingCountResult.data[0].embedding,
+          embeddingLength: embeddingCountResult.data[0].embedding?.length
         } : null
       });
+      
+      // Also try a direct count query
+      const { count } = await supabaseClient
+        .from('brands')
+        .select('*', { count: 'exact', head: true })
+        .eq('approval_status', 'approved')
+        .not('embedding', 'is', null);
+      
+      console.log('🧪 Total approved brands with embeddings:', count);
+      
     } catch (e) {
       console.error('🧪 Embedding count check failed:', e);
     }
@@ -275,6 +290,16 @@ Deno.serve(async (req) => {
           autoRefreshToken: false,
           persistSession: false,
         },
+        db: {
+          schema: 'public'
+        },
+        global: {
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'apikey': supabaseKey,
+            'Content-Type': 'application/json'
+          }
+        }
       }
     );
 
