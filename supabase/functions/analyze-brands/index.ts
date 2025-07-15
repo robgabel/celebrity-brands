@@ -193,6 +193,8 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     You must select the most appropriate option from each list. Do not create new categories or types.
   `;
 
+  console.log('🔍 Starting factual analysis with low temperature (0.1)...');
+
   // Get factual data with low temperature (0.1)
   const factualCompletion = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -216,6 +218,7 @@ async function analyzeBrand(brand: { name: string; creators: string; description
   let factualAnalysis;
   try {
     factualAnalysis = JSON.parse(factualContent);
+    console.log('✅ Factual analysis completed successfully');
   } catch (parseError) {
     console.error('Failed to parse OpenAI factual response:', factualContent);
     throw new Error('Invalid factual response format from OpenAI');
@@ -237,6 +240,8 @@ async function analyzeBrand(brand: { name: string; creators: string; description
       "description": "your creative description here"
     }
   `;
+
+  console.log('🎨 Starting creative description with higher temperature (0.7)...');
 
   const descriptionCompletion = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -260,6 +265,7 @@ async function analyzeBrand(brand: { name: string; creators: string; description
   let descriptionAnalysis;
   try {
     descriptionAnalysis = JSON.parse(descriptionContent);
+    console.log('✅ Creative description completed successfully');
   } catch (parseError) {
     console.error('Failed to parse OpenAI description response:', descriptionContent);
     throw new Error('Invalid description response format from OpenAI');
@@ -270,6 +276,8 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     ...factualAnalysis,
     description: descriptionAnalysis.description
   };
+
+  console.log('🔄 Validating and cleaning analysis results...');
 
   try {
     
@@ -320,6 +328,15 @@ async function analyzeBrand(brand: { name: string; creators: string; description
       }
     }
     
+    console.log('✅ Analysis validation completed successfully');
+    console.log('📊 Final analysis summary:', {
+      product_category: analysis.product_category,
+      type_of_influencer: analysis.type_of_influencer,
+      description_length: analysis.description.length,
+      has_homepage: !!analysis.homepage_url,
+      social_platforms: analysis.social_links ? Object.keys(analysis.social_links).length : 0
+    });
+    
     return analysis;
   } catch (parseError) {
     console.error('Failed to validate analysis:', parseError);
@@ -347,6 +364,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Analyze-brands function started');
+
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -369,6 +388,7 @@ Deno.serve(async (req) => {
     }
 
     const { brandId } = body;
+    console.log('📋 Processing brand ID:', brandId);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -383,6 +403,7 @@ Deno.serve(async (req) => {
     );
 
     // Fetch brand details
+    console.log('🔍 Fetching brand details from database...');
     const { data: brand, error: brandError } = await supabaseClient
       .from('brands')
       .select('name, creators, description')
@@ -404,13 +425,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Perform analysis
+    console.log('✅ Brand details fetched:', {
+      name: brand.name,
+      creators: brand.creators,
+      description_length: brand.description?.length || 0
+    });
+
+    // Perform analysis with dual temperature approach
+    console.log('🤖 Starting dual-temperature AI analysis...');
     const analysis = await analyzeBrand(brand);
 
     // Update the brand with the comprehensive analysis
-    console.log('Attempting to update brand with analysis:', {
+    console.log('💾 Updating brand in database with analysis results...');
+    console.log('📊 Analysis data being saved:', {
       brandId,
-      analysis: JSON.stringify(analysis, null, 2)
+      product_category: analysis.product_category,
+      type_of_influencer: analysis.type_of_influencer,
+      year_founded: analysis.year_founded,
+      year_discontinued: analysis.year_discontinued,
+      description_preview: analysis.description.substring(0, 50) + '...',
+      brand_collab: analysis.brand_collab,
+      has_logo_url: !!analysis.logo_url,
+      has_homepage_url: !!analysis.homepage_url,
+      social_platforms: analysis.social_links ? Object.keys(analysis.social_links) : []
     });
     
     const { error: updateError } = await supabaseClient
@@ -439,11 +476,15 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to update brand with analysis: ${updateError.message}`);
     }
 
+    console.log('✅ Brand successfully updated in database');
+    console.log('🎉 Analysis completed successfully for brand ID:', brandId);
+
     return new Response(
       JSON.stringify({
         success: true,
         analysis,
         brandId: brandId,
+        message: 'Brand analysis completed with dual-temperature approach'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -451,7 +492,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Analysis function error:', error);
+    console.error('💥 Analysis function error:', error);
 
     // Handle specific OpenAI errors
     if (error.message?.includes('rate limit') || error.status === 429) {
