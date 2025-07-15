@@ -243,6 +243,28 @@ Deno.serve(async (req) => {
       throw new Error('Failed to generate query embedding');
     }
 
+    // Test 2: Check how many brands have embeddings
+    console.log('🧪 Checking brands with embeddings...');
+    try {
+      const embeddingCountResult = await supabaseClient
+        .from('brands')
+        .select('id, name, embedding')
+        .not('embedding', 'is', null)
+        .limit(5);
+      
+      console.log('🧪 Brands with embeddings:', {
+        error: embeddingCountResult.error?.message,
+        count: embeddingCountResult.data?.length,
+        firstBrand: embeddingCountResult.data?.[0] ? {
+          id: embeddingCountResult.data[0].id,
+          name: embeddingCountResult.data[0].name,
+          hasEmbedding: !!embeddingCountResult.data[0].embedding
+        } : null
+      });
+    } catch (e) {
+      console.error('🧪 Embedding count check failed:', e);
+    }
+    
     // Initialize Supabase client
     console.log('🗄️ Initializing Supabase client...');
     const supabaseClient = createClient(
