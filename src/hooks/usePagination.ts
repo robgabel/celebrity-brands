@@ -12,7 +12,12 @@ export function usePagination(initialItemsPerPage: number = 25) {
     const savedPreferences = localStorage.getItem(STORAGE_KEY);
     if (savedPreferences) {
       try {
-        return JSON.parse(savedPreferences);
+        const parsed = JSON.parse(savedPreferences);
+        // Always start on page 1, but preserve itemsPerPage preference
+        return {
+          currentPage: 1,
+          itemsPerPage: parsed.itemsPerPage || initialItemsPerPage
+        };
       } catch (e) {
         console.error('Error parsing pagination preferences:', e);
       }
