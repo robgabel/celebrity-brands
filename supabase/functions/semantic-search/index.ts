@@ -280,6 +280,43 @@ Deno.serve(async (req) => {
       console.error('🧪 Embedding count check failed:', e);
     }
     
+    // Check if match_brands function exists
+    console.log('🔍 Checking if match_brands function exists in database...');
+    try {
+      const functionCheck = await supabaseClient
+        .rpc('match_brands', {
+          query_embedding: [0.1, 0.2, 0.3], // tiny test vector
+          match_threshold: 0.0,
+          match_count: 1
+        });
+      console.log('🔍 Function exists - result:', {
+        error: functionCheck.error?.message,
+        errorCode: functionCheck.error?.code,
+        errorDetails: functionCheck.error?.details,
+        hasData: !!functionCheck.data,
+        dataLength: functionCheck.data?.length
+      });
+    } catch (e) {
+      console.error('🔍 Function check failed with exception:', e);
+    }
+    
+    // Also try to list all available RPC functions
+    console.log('🔍 Checking available RPC functions...');
+    try {
+      const { data: functions, error: funcError } = await supabaseClient
+        .from('pg_proc')
+        .select('proname')
+        .like('proname', '%match%')
+        .limit(10);
+      
+      console.log('🔍 Available functions with "match":', {
+        error: funcError?.message,
+        functions: functions?.map(f => f.proname)
+      });
+    } catch (e) {
+      console.error('🔍 Could not list functions:', e);
+    }
+    
     // Initialize Supabase client
     console.log('🗄️ Initializing Supabase client...');
     const supabaseClient = createClient(
