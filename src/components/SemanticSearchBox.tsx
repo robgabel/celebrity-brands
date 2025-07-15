@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, Sparkles, Hash } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import { Button } from './Button';
 import { ErrorMessage } from './ErrorMessage';
+import { supabase } from '../lib/supabase';
 
 interface SearchResult {
   id: number;
@@ -11,7 +12,7 @@ interface SearchResult {
   creators: string;
   product_category: string;
   description: string;
-  similarity: number;
+  similarity?: number;
 }
 
 export function SemanticSearchBox() {
@@ -21,6 +22,7 @@ export function SemanticSearchBox() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [isKeywordFallback, setIsKeywordFallback] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   useEffect(() => {
@@ -40,21 +42,46 @@ export function SemanticSearchBox() {
     } else {
       setResults([]);
       setShowResults(false);
+      setIsKeywordFallback(false);
     }
   }, [debouncedSearchQuery]);
+
+  const performKeywordSearch = async (query: string): Promise<SearchResult[]> => {
+    try {
+      const searchPattern = `%${query.toLowerCase()}%`;
+      const { data: brands, error: brandsError } = await supabase
+        .from('brands')
+        .select('id, name, creators, product_category, description')
+        .eq('approval_status', 'approved')
+        .or(`name.ilike.${searchPattern},creators.ilike.${searchPattern}`)
+        .limit(8);
+
+      if (brandsError) {
+        throw brandsError;
+      }
+
+      return brands || [];
+    } catch (err: any) {
+      console.error('Keyword search error:', err);
+      throw new Error('Failed to perform keyword search');
+    }
+  };
 
   const performSearch = async (shouldNavigate = true) => {
     if (!searchQuery.trim()) {
       setResults([]);
       setShowResults(false);
+      setIsKeywordFallback(false);
       return;
     }
 
     setIsSearching(true);
     setError(null);
     setShowResults(true);
+    setIsKeywordFallback(false);
 
     try {
+      // Step 1: Try semantic search first
       let response;
       try {
         response = await fetch(
@@ -85,21 +112,44 @@ export function SemanticSearchBox() {
       }
 
       const data = await response.json();
-      const matches = data.results || [];
-      setResults(matches);
+      const semanticMatches = data.results || [];
+      
+      // Step 2: If semantic search found results, use them
+      if (semanticMatches.length > 0) {
+        setResults(semanticMatches);
+        setIsKeywordFallback(false);
 
-      if (shouldNavigate && matches.length > 0) {
-        setSearchQuery('');
-        setShowResults(false);
-        navigate(`/explore?semantic=${encodeURIComponent(searchQuery.trim())}`);
-      } else if (shouldNavigate && matches.length === 0) {
-        // Keep on homepage but show no results message
-        setShowResults(true);
+        if (shouldNavigate) {
+          setSearchQuery('');
+          setShowResults(false);
+          navigate(`/explore?semantic=${encodeURIComponent(searchQuery.trim())}`);
+        }
+        return;
       }
+
+      // Step 3: If no semantic results, try keyword search as fallback
+      console.log('No semantic results found, trying keyword search fallback...');
+      const keywordMatches = await performKeywordSearch(searchQuery.trim());
+      
+      if (keywordMatches.length > 0) {
+        setResults(keywordMatches);
+        setIsKeywordFallback(true);
+        
+        if (shouldNavigate) {
+          // For keyword results, don't auto-navigate, let user select from dropdown
+          return;
+        }
+      } else {
+        // No results from either search method
+        setResults([]);
+        setIsKeywordFallback(false);
+      }
+
     } catch (err: any) {
       console.error('Search error:', err);
       setError(err.message);
       setResults([]);
+      setIsKeywordFallback(false);
     } finally {
       setIsSearching(false);
     }
@@ -113,6 +163,7 @@ export function SemanticSearchBox() {
   const handleResultClick = (result: SearchResult) => {
     setSearchQuery('');
     setShowResults(false);
+    setIsKeywordFallback(false);
     navigate(`/brands/${result.id}`);
   };
 
@@ -121,6 +172,7 @@ export function SemanticSearchBox() {
     setResults([]);
     setShowResults(false);
     setError(null);
+    setIsKeywordFallback(false);
   };
 
   return (
@@ -177,15 +229,31 @@ export function SemanticSearchBox() {
         <div className="absolute top-16 left-0 right-0 bg-gray-800 rounded-lg border border-gray-700 shadow-xl overflow-hidden z-50">
           <div className="p-3 border-b border-gray-700 bg-gray-750">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">
-                Found {results.length} matching brands
-              </span>
-              <button
-                onClick={handleSubmit}
-                className="text-sm text-teal-400 hover:text-teal-300 font-medium"
-              >
-                View all results →
-              </button>
+              <div className="flex items-center gap-2">
+                {isKeywordFallback ? (
+                  <>
+                    <Hash className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-blue-400">
+                      Brand name matches for "{searchQuery}"
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-teal-400" />
+                    <span className="text-sm text-gray-400">
+                      Found {results.length} matching brands
+                    </span>
+                  </>
+                )}
+              </div>
+              {!isKeywordFallback && (
+                <button
+                  onClick={handleSubmit}
+                  className="text-sm text-teal-400 hover:text-teal-300 font-medium"
+                >
+                  View all results →
+                </button>
+              )}
             </div>
           </div>
           {results.slice(0, 5).map((result) => (
@@ -199,16 +267,18 @@ export function SemanticSearchBox() {
                   <h4 className="text-gray-200 font-medium">{result.name}</h4>
                   <p className="text-sm text-gray-400">{result.creators}</p>
                 </div>
-                <span className="text-xs text-teal-400 ml-2">
-                  {Math.round(result.similarity * 100)}% match
-                </span>
+                {!isKeywordFallback && result.similarity && (
+                  <span className="text-xs text-teal-400 ml-2">
+                    {Math.round(result.similarity * 100)}% match
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-300 mt-1 line-clamp-2">
                 {result.description}
               </p>
             </button>
           ))}
-          {results.length > 5 && (
+          {results.length > 5 && !isKeywordFallback && (
             <div className="p-3 bg-gray-750 border-t border-gray-700">
               <button
                 onClick={handleSubmit}
