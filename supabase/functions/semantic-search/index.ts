@@ -76,6 +76,24 @@ Deno.serve(async (req) => {
       console.log('🧪 Using known embedding, length:', knownWorkingEmbedding.length);
       console.log('🧪 First 5 values:', knownWorkingEmbedding.slice(0, 5));
       
+      // Test the exact SQL query that worked
+      console.log('🧪 Testing direct SQL query first...');
+      try {
+        const directSqlResult = await supabaseClient
+          .from('brands')
+          .select('id, name, creators, product_category, description')
+          .eq('approval_status', 'approved')
+          .limit(5);
+        
+        console.log('🧪 Direct SQL query result:', {
+          error: directSqlResult.error,
+          count: directSqlResult.data?.length,
+          firstBrand: directSqlResult.data?.[0]
+        });
+      } catch (e) {
+        console.error('🧪 Direct SQL query failed:', e);
+      }
+      
       // Jump to similarity search
       console.log('🗄️ Initializing Supabase client...');
       const supabaseClient = createClient(
@@ -92,8 +110,31 @@ Deno.serve(async (req) => {
       // Perform similarity search with known embedding
       console.log('🔍 Calling match_brands RPC function with known embedding...');
       
+      // First, let's check if the function exists
+      console.log('🔍 Checking if match_brands function exists...');
+      try {
+        const functionCheck = await supabaseClient
+          .rpc('match_brands', {
+            query_embedding: [0.1, 0.2, 0.3], // dummy small vector
+            match_threshold: 0.0,
+            match_count: 1
+          });
+        console.log('🔍 Function exists check result:', {
+          error: functionCheck.error?.message,
+          errorCode: functionCheck.error?.code,
+          hasData: !!functionCheck.data
+        });
+      } catch (e) {
+        console.error('🔍 Function check failed:', e);
+      }
+      
       let matches, searchError;
       try {
+        console.log('🔍 About to call match_brands with parameters:');
+        console.log('🔍 - query_embedding length:', knownWorkingEmbedding.length);
+        console.log('🔍 - match_threshold:', 0.0);
+        console.log('🔍 - match_count:', 10);
+        
         const result = await supabaseClient.rpc(
           'match_brands',
           {
@@ -102,15 +143,24 @@ Deno.serve(async (req) => {
             match_count: 10
           }
         );
+        
         matches = result.data;
         searchError = result.error;
         
-        console.log('🔍 RPC call completed with known embedding');
-        console.log('🔍 Error:', searchError);
-        console.log('🔍 Matches count:', matches?.length);
-        console.log('🔍 First match:', matches?.[0]);
+        console.log('🔍 RPC call completed with known embedding:');
+        console.log('🔍 - Error:', searchError);
+        console.log('🔍 - Error code:', searchError?.code);
+        console.log('🔍 - Error message:', searchError?.message);
+        console.log('🔍 - Error details:', searchError?.details);
+        console.log('🔍 - Matches count:', matches?.length);
+        console.log('🔍 - Matches type:', typeof matches);
+        console.log('🔍 - First match:', matches?.[0]);
+        console.log('🔍 - Raw result object keys:', Object.keys(result));
       } catch (e) {
-        console.error('❌ RPC call failed:', e);
+        console.error('❌ RPC call failed with exception:', e);
+        console.error('❌ Exception type:', typeof e);
+        console.error('❌ Exception message:', e.message);
+        console.error('❌ Exception stack:', e.stack);
         throw new Error(`Database search failed: ${e.message}`);
       }
 
