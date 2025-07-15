@@ -279,7 +279,62 @@ export function useBrandsData(): UseBrandsDataReturn {
       setBrands(data || []);
       setTotalItems(count || 0);
     } catch (error) {
-      console.error('Error fetching brands:', error);
+      // Handle pagination range error
+      if (error?.code === 'PGRST103' || error?.message?.includes('Requested range not satisfiable')) {
+        // Get the actual count for current filters
+        let countQuery = supabase
+          .from('brands')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!isAdmin) {
+          countQuery = countQuery.eq('approval_status', 'approved');
+        }
+
+        if (debouncedSearchQuery) {
+          const searchPattern = `%${debouncedSearchQuery.toLowerCase()}%`;
+          countQuery = countQuery.or(
+            `name.ilike.${searchPattern},` +
+            `creators.ilike.${searchPattern}`
+          );
+        }
+
+        if (categoryFilter !== 'All Categories') {
+          countQuery = countQuery.eq('product_category', categoryFilter);
+        }
+
+        if (founderFilter !== 'All Founder Types') {
+          countQuery = countQuery.eq('type_of_influencer', founderFilter);
+        }
+
+        if (typeFilter !== 'All Types') {
+          countQuery = countQuery.eq('brand_collab', typeFilter === 'Collab');
+        }
+
+        if (showFavoritesOnly && favoriteIds.length > 0) {
+          countQuery = countQuery.in('id', favoriteIds);
+        }
+
+        try {
+          const { count } = await countQuery;
+          const actualCount = count || 0;
+          setTotalItems(actualCount);
+          
+          // Calculate the last valid page
+          const lastValidPage = Math.max(1, Math.ceil(actualCount / itemsPerPage));
+          
+          // If current page is out of bounds, reset to last valid page
+          if (currentPage > lastValidPage) {
+            setCurrentPage(lastValidPage);
+            return; // This will trigger a re-fetch with the corrected page
+          }
+        } catch (countError) {
+          console.error('Error getting count:', countError);
+          setError('Failed to load brands');
+        }
+      } else {
+        console.error('Error fetching brands:', error);
+        setError('Failed to load brands');
+      }
     } finally {
       setLoading(false);
     }
