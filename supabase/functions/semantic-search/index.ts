@@ -126,6 +126,13 @@ Deno.serve(async (req) => {
       match_count: 10
     });
 
+    // Add detailed logging for the embedding vector
+    console.log('🔍 Sending query_embedding to match_brands RPC:');
+    console.log('🔍 First 5 values of query_embedding:', embeddingData.data[0].embedding.slice(0, 5));
+    console.log('🔍 Last 5 values of query_embedding:', embeddingData.data[0].embedding.slice(-5));
+    console.log('🔍 Full query_embedding length:', embeddingData.data[0].embedding.length);
+    // console.log('🔍 Full query_embedding (CAUTION: very long):', embeddingData.data[0].embedding); // Uncomment for full vector if needed
+
     let matches, searchError;
     try {
       const result = await supabaseClient.rpc(
