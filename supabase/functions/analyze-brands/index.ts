@@ -27,9 +27,10 @@ interface FullAnalysisResult {
 async function analyzeBrand(brand: { name: string; creators: string; description: string }): Promise<FullAnalysisResult> {
   const { name, creators, description } = brand;
 
-  const systemPrompt = `
+  // First call: Get factual data with low temperature
+  const factualSystemPrompt = `
     You are an expert brand analyst. Your task is to analyze the provided brand
-    details and provide comprehensive information about the brand.
+    details and provide factual information about the brand.
 
     Respond with ONLY a valid JSON object containing ALL of the following fields:
 
@@ -177,27 +178,26 @@ async function analyzeBrand(brand: { name: string; creators: string; description
 
     3. "year_founded" - The year the brand was founded (number) or null if unknown
     4. "year_discontinued" - The year the brand was discontinued (number) or null if still active/unknown
-    5. "description" - A single sentence description of 10-20 words summarizing what the brand offers
-    6. "brand_collab" - Boolean (true/false) indicating if this is a collaboration brand or the creator's own brand
-    7. "logo_url" - A valid URL to the brand's official logo image or null if not found
-    8. "homepage_url" - A valid URL to the brand's official website or null if not found
-    9. "social_links" - A JSON object with social media platform names as keys and their URLs as values, or null if none found. Use lowercase platform names like "instagram", "twitter", "tiktok", "youtube", "facebook", "linkedin"
+    5. "brand_collab" - Boolean (true/false) indicating if this is a collaboration brand or the creator's own brand
+    6. "logo_url" - A valid URL to the brand's official logo image or null if not found
+    7. "homepage_url" - A valid URL to the brand's official website or null if not found
+    8. "social_links" - A JSON object with social media platform names as keys and their URLs as values, or null if none found. Use lowercase platform names like "instagram", "twitter", "tiktok", "youtube", "facebook", "linkedin"
 
     IMPORTANT GUIDELINES:
     - For URLs, only provide valid, working URLs from official sources
     - For social_links, only include platforms that actually exist for the brand
     - For brand_collab: true = collaboration with another brand/company, false = creator's own brand
-    - For description: Keep it concise, factual, and focused on what the brand offers
     - If you cannot find reliable information for a field, use null for optional fields
     - All fields must be present in the response, even if some are null
 
     You must select the most appropriate option from each list. Do not create new categories or types.
   `;
 
-  const completion = await openai.chat.completions.create({
+  // Get factual data with low temperature (0.1)
+  const factualCompletion = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: factualSystemPrompt },
       { 
         role: 'user', 
         content: `Brand Name: ${name}\nCreators: ${creators}\nDescription: ${description}` 
@@ -208,13 +208,70 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     response_format: { type: 'json_object' },
   });
 
-  const content = completion.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('No response received from OpenAI');
+  const factualContent = factualCompletion.choices[0]?.message?.content;
+  if (!factualContent) {
+    throw new Error('No factual response received from OpenAI');
   }
 
+  let factualAnalysis;
   try {
-    const analysis = JSON.parse(content) as FullAnalysisResult;
+    factualAnalysis = JSON.parse(factualContent);
+  } catch (parseError) {
+    console.error('Failed to parse OpenAI factual response:', factualContent);
+    throw new Error('Invalid factual response format from OpenAI');
+  }
+
+  // Second call: Get creative description with higher temperature
+  const descriptionSystemPrompt = `
+    You are a creative brand copywriter. Create a compelling, concise description for this brand.
+    
+    Requirements:
+    - Write exactly ONE sentence
+    - Use 10-20 words total
+    - Make it engaging and descriptive
+    - Focus on what the brand offers and what makes it unique
+    - Be creative but accurate
+    
+    Respond with ONLY a JSON object containing:
+    {
+      "description": "your creative description here"
+    }
+  `;
+
+  const descriptionCompletion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: descriptionSystemPrompt },
+      { 
+        role: 'user', 
+        content: `Brand Name: ${name}\nCreators: ${creators}\nDescription: ${description}` 
+      },
+    ],
+    temperature: 0.7, // Higher temperature for more creative descriptions
+    max_tokens: 100,
+    response_format: { type: 'json_object' },
+  });
+
+  const descriptionContent = descriptionCompletion.choices[0]?.message?.content;
+  if (!descriptionContent) {
+    throw new Error('No description response received from OpenAI');
+  }
+
+  let descriptionAnalysis;
+  try {
+    descriptionAnalysis = JSON.parse(descriptionContent);
+  } catch (parseError) {
+    console.error('Failed to parse OpenAI description response:', descriptionContent);
+    throw new Error('Invalid description response format from OpenAI');
+  }
+
+  // Combine the results
+  const analysis: FullAnalysisResult = {
+    ...factualAnalysis,
+    description: descriptionAnalysis.description
+  };
+
+  try {
     
     // Validate that required fields are present
     if (!analysis.product_category || !analysis.type_of_influencer) {
@@ -265,7 +322,7 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     
     return analysis;
   } catch (parseError) {
-    console.error('Failed to parse OpenAI response:', content);
+    console.error('Failed to validate analysis:', parseError);
     throw new Error('Invalid response format from OpenAI');
   }
 }
