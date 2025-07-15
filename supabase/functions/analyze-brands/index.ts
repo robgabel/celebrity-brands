@@ -351,6 +351,11 @@ Deno.serve(async (req) => {
     const analysis = await analyzeBrand(brand);
 
     // Update the brand with the comprehensive analysis
+    console.log('Attempting to update brand with analysis:', {
+      brandId,
+      analysis: JSON.stringify(analysis, null, 2)
+    });
+    
     const { error: updateError } = await supabaseClient
       .from('brands')
       .update({
@@ -368,8 +373,13 @@ Deno.serve(async (req) => {
       .eq('id', brandId);
 
     if (updateError) {
-      console.error('Database update error:', updateError);
-      throw new Error('Failed to update brand with analysis');
+      console.error('Database update error details:', {
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code
+      });
+      throw new Error(`Failed to update brand with analysis: ${updateError.message}`);
     }
 
     return new Response(
