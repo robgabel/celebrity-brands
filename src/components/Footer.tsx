@@ -9,7 +9,7 @@ export function Footer() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-teal-400">Celebrity Brands</h2>
           <p className="text-gray-400 text-sm">
-            Discover, track, and engage with celebrity-owned brands and their associated data.
+            Discover, follow, and invest in celebrity and creator owned brands
           </p>
           <div className="flex space-x-4 text-gray-400">
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-teal-400 transition-colors">
