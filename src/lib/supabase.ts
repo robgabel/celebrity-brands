@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Debug logging to verify environment variables are loaded correctly
+console.log('Supabase Environment Variables:', { 
+  supabaseUrl, 
+  supabaseAnonKey: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined'
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
@@ -90,18 +96,39 @@ export const initializeAuth = async () => {
   if (authInitialized) return;
   
   try {
+    // Add connection test before attempting to get session
+    console.log('Testing Supabase connection...');
+    
     // Get the current session
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Error getting session:', error);
+      console.error('Error getting session:', error.message || error);
+      
+      // Provide more specific error handling for connection issues
+      if (error.message === 'Failed to fetch') {
+        console.error('Network connection failed. Please check:');
+        console.error('1. Internet connection');
+        console.error('2. Supabase project status');
+        console.error('3. Environment variables are correct');
+        console.error('4. No firewall/VPN blocking the connection');
+      }
+      
       return null;
     }
 
+    console.log('Supabase connection successful');
     authInitialized = true;
     return session;
   } catch (error) {
-    console.error('Error initializing auth:', error);
+    console.error('Error initializing auth:', error instanceof Error ? error.message : error);
+    
+    // Additional debugging for network errors
+    if (error instanceof Error && error.message === 'Failed to fetch') {
+      console.error('Connection test failed. Supabase URL:', supabaseUrl);
+      console.error('Please verify your Supabase project is active and accessible');
+    }
+    
     return null;
   }
 };
