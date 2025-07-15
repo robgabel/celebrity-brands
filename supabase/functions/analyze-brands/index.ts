@@ -11,23 +11,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AnalysisResult {
+interface FullAnalysisResult {
   product_category: string;
   type_of_influencer: string;
+  year_founded: number | null;
+  year_discontinued: number | null;
+  description: string;
+  brand_collab: boolean;
+  logo_url: string | null;
+  homepage_url: string | null;
+  social_links: Record<string, string> | null;
 }
 
 // --- Main Analysis Logic ---
-async function analyzeBrand(brand: { name: string; creators: string; description: string }): Promise<AnalysisResult> {
+async function analyzeBrand(brand: { name: string; creators: string; description: string }): Promise<FullAnalysisResult> {
   const { name, creators, description } = brand;
 
   const systemPrompt = `
     You are an expert brand analyst. Your task is to analyze the provided brand
-    details and classify the brand's "product_category" and "type_of_influencer".
+    details and provide comprehensive information about the brand.
 
-    Respond with ONLY a valid JSON object containing two fields: "product_category"
-    and "type_of_influencer".
+    Respond with ONLY a valid JSON object containing ALL of the following fields:
 
-    1. Choose the product category from ONLY these options:
+    1. "product_category" - Choose from ONLY these options:
     - Alcoholic Beverages
     - Beauty & Personal Care
     - Beauty & Personal Care (Fragrance)
@@ -43,7 +49,7 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     - Tech & Software
     - Toys, Games & Children's Products
 
-    2. Choose the influencer type from ONLY these options:
+    2. "type_of_influencer" - Choose from ONLY these options:
     - Actor/Celebrity Influencer
     - Actor/Film Producer
     - Actor/Writer
@@ -169,6 +175,22 @@ async function analyzeBrand(brand: { name: string; creators: string; description
     - YouTubers/Gaming Influencers
     - YouTubers/Pranksters
 
+    3. "year_founded" - The year the brand was founded (number) or null if unknown
+    4. "year_discontinued" - The year the brand was discontinued (number) or null if still active/unknown
+    5. "description" - A single sentence description of 10-20 words summarizing what the brand offers
+    6. "brand_collab" - Boolean (true/false) indicating if this is a collaboration brand or the creator's own brand
+    7. "logo_url" - A valid URL to the brand's official logo image or null if not found
+    8. "homepage_url" - A valid URL to the brand's official website or null if not found
+    9. "social_links" - A JSON object with social media platform names as keys and their URLs as values, or null if none found. Use lowercase platform names like "instagram", "twitter", "tiktok", "youtube", "facebook", "linkedin"
+
+    IMPORTANT GUIDELINES:
+    - For URLs, only provide valid, working URLs from official sources
+    - For social_links, only include platforms that actually exist for the brand
+    - For brand_collab: true = collaboration with another brand/company, false = creator's own brand
+    - For description: Keep it concise, factual, and focused on what the brand offers
+    - If you cannot find reliable information for a field, use null for optional fields
+    - All fields must be present in the response, even if some are null
+
     You must select the most appropriate option from each list. Do not create new categories or types.
   `;
 
@@ -182,8 +204,8 @@ async function analyzeBrand(brand: { name: string; creators: string; description
       },
     ],
     temperature: 0.1,
-    max_tokens: 150,
-    response_format: { type: 'json_object' }, // This enforces JSON output
+    max_tokens: 500,
+    response_format: { type: 'json_object' },
   });
 
   const content = completion.choices[0]?.message?.content;
@@ -192,17 +214,69 @@ async function analyzeBrand(brand: { name: string; creators: string; description
   }
 
   try {
-    const analysis = JSON.parse(content) as AnalysisResult;
+    const analysis = JSON.parse(content) as FullAnalysisResult;
     
     // Validate that required fields are present
     if (!analysis.product_category || !analysis.type_of_influencer) {
       throw new Error('Missing required fields in analysis response');
+    }
+
+    // Validate data types and formats
+    if (analysis.year_founded !== null && (typeof analysis.year_founded !== 'number' || analysis.year_founded < 1800 || analysis.year_founded > new Date().getFullYear())) {
+      analysis.year_founded = null;
+    }
+
+    if (analysis.year_discontinued !== null && (typeof analysis.year_discontinued !== 'number' || analysis.year_discontinued < 1800 || analysis.year_discontinued > new Date().getFullYear())) {
+      analysis.year_discontinued = null;
+    }
+
+    if (typeof analysis.description !== 'string' || analysis.description.length === 0) {
+      throw new Error('Invalid description format');
+    }
+
+    if (typeof analysis.brand_collab !== 'boolean') {
+      analysis.brand_collab = false; // Default to false if not properly set
+    }
+
+    // Validate URLs
+    if (analysis.logo_url && !isValidUrl(analysis.logo_url)) {
+      analysis.logo_url = null;
+    }
+
+    if (analysis.homepage_url && !isValidUrl(analysis.homepage_url)) {
+      analysis.homepage_url = null;
+    }
+
+    // Validate social links
+    if (analysis.social_links) {
+      if (typeof analysis.social_links !== 'object' || Array.isArray(analysis.social_links)) {
+        analysis.social_links = null;
+      } else {
+        // Filter out invalid URLs from social links
+        const validSocialLinks: Record<string, string> = {};
+        for (const [platform, url] of Object.entries(analysis.social_links)) {
+          if (typeof url === 'string' && isValidUrl(url)) {
+            validSocialLinks[platform.toLowerCase()] = url;
+          }
+        }
+        analysis.social_links = Object.keys(validSocialLinks).length > 0 ? validSocialLinks : null;
+      }
     }
     
     return analysis;
   } catch (parseError) {
     console.error('Failed to parse OpenAI response:', content);
     throw new Error('Invalid response format from OpenAI');
+  }
+}
+
+// Helper function to validate URLs
+function isValidUrl(string: string): boolean {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (_) {
+    return false;
   }
 }
 
@@ -276,12 +350,19 @@ Deno.serve(async (req) => {
     // Perform analysis
     const analysis = await analyzeBrand(brand);
 
-    // Update the brand with the analysis
+    // Update the brand with the comprehensive analysis
     const { error: updateError } = await supabaseClient
       .from('brands')
       .update({
         product_category: analysis.product_category,
         type_of_influencer: analysis.type_of_influencer,
+        year_founded: analysis.year_founded,
+        year_discontinued: analysis.year_discontinued,
+        description: analysis.description,
+        brand_collab: analysis.brand_collab,
+        logo_url: analysis.logo_url,
+        homepage_url: analysis.homepage_url,
+        social_links: analysis.social_links,
         updated_at: new Date().toISOString(),
       })
       .eq('id', brandId);
