@@ -148,7 +148,6 @@ export function ExplorePage() {
                   <button
                     onClick={() => {
                       navigate('/explore');
-                      window.location.reload();
                     }}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-900/20 hover:bg-red-800/30 text-red-300 rounded-lg transition-colors border border-red-700/30"
                   >
