@@ -143,7 +143,7 @@ export function HomePage() {
         <section className="py-12 md:py-20 px-4 mb-12 bg-gray-800/50 backdrop-blur-sm rounded-xl text-center border border-gray-700/50">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-100 mb-4 sm:mb-6 max-w-4xl mx-auto leading-tight">
             Discover and Invest in {totalBrands}<br />
-            Celebrity or Creator Brands
+            Celebrity & Creator Brands
           </h1>
           <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
             * investing isn't possible yet, but did it get your attention? :)
@@ -156,7 +156,7 @@ export function HomePage() {
               to="/explore" 
               className="text-teal-400 hover:text-teal-300 transition-colors text-sm md:text-base font-medium"
             >
-              Browse All Brands
+              Or, Explore All Brands
             </Link>
           </div>
         </section>
