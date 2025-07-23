@@ -214,7 +214,7 @@ export function useBrandsData(): UseBrandsDataReturn {
         return;
       } catch (err: any) {
         console.error('Semantic search error:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : String(err));
         setLoading(false);
         return;
       }
