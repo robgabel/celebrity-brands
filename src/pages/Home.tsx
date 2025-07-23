@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { retrySupabaseOperation } from '../lib/supabase';
 import { BrandCard } from '../components/BrandCard';
 import { getCategoryIcon } from '../lib/categoryUtils';
 import { GlobalNav } from '../components/GlobalNav';
@@ -29,59 +30,63 @@ export function HomePage() {
         setLoading(true);
         setError(null);
         
-        const { count: brandsCount } = await supabase
-          .from('brands')
-          .select('*', { count: 'exact', head: true })
-          .eq('approval_status', 'approved');
-        
-        setTotalBrands(brandsCount || 0);
-        
-        const { data: featuredData, error: featuredError } = await supabase
-          .from('brands')
-          .select('*')
-          .eq('approval_status', 'approved')
-          .is('year_discontinued', null)
-          .eq('brand_collab', false)
-          .order('id', { ascending: false })
-          .limit(20);
+        // Use retry logic for all database operations
+        await retrySupabaseOperation(async () => {
+          const { count: brandsCount } = await supabase
+            .from('brands')
+            .select('*', { count: 'exact', head: true })
+            .eq('approval_status', 'approved');
           
-        if (featuredError) throw featuredError;
-        
-        // Randomly select 4 brands from the results
-        if (featuredData && featuredData.length > 0) {
-          const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
-          setFeaturedBrands(shuffled.slice(0, 4));
-        } else {
-          setFeaturedBrands([]);
-        }
-        
-        const { data: recentData, error: recentError } = await supabase
-          .from('brands')
-          .select('*')
-          .eq('approval_status', 'approved')
-          .order('created_at', { ascending: false })
-          .limit(8);
+          setTotalBrands(brandsCount || 0);
           
-        if (recentError) throw recentError;
-        setRecentBrands(recentData || []);
-        
-        const { data: categoryData, error: categoryError } = await supabase
-          .from('brands')
-          .select('product_category')
-          .eq('approval_status', 'approved');
+          const { data: featuredData, error: featuredError } = await supabase
+            .from('brands')
+            .select('*')
+            .eq('approval_status', 'approved')
+            .is('year_discontinued', null)
+            .eq('brand_collab', false)
+            .order('id', { ascending: false })
+            .limit(20);
+            
+          if (featuredError) throw featuredError;
           
-        if (categoryError) throw categoryError;
-        
-        if (categoryData) {
-          const uniqueCategories = Array.from(
-            new Set(categoryData.map(item => item.product_category))
-          ).filter(Boolean) as string[];
+          // Randomly select 4 brands from the results
+          if (featuredData && featuredData.length > 0) {
+            const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
+            setFeaturedBrands(shuffled.slice(0, 4));
+          } else {
+            setFeaturedBrands([]);
+          }
           
-          setCategories(uniqueCategories.sort());
-        }
+          const { data: recentData, error: recentError } = await supabase
+            .from('brands')
+            .select('*')
+            .eq('approval_status', 'approved')
+            .order('created_at', { ascending: false })
+            .limit(8);
+            
+          if (recentError) throw recentError;
+          setRecentBrands(recentData || []);
+          
+          const { data: categoryData, error: categoryError } = await supabase
+            .from('brands')
+            .select('product_category')
+            .eq('approval_status', 'approved');
+            
+          if (categoryError) throw categoryError;
+          
+          if (categoryData) {
+            const uniqueCategories = Array.from(
+              new Set(categoryData.map(item => item.product_category))
+            ).filter(Boolean) as string[];
+            
+            setCategories(uniqueCategories.sort());
+          }
+        }, 3, 2000);
+        
       } catch (err: any) {
         console.error('Error fetching home data:', err);
-        setError(err.message || 'Failed to load content. Please try again later.');
+        setError(err.message || 'Failed to connect to the database. Please check your internet connection and try again.');
       } finally {
         setLoading(false);
       }
@@ -92,8 +97,10 @@ export function HomePage() {
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
+      await retrySupabaseOperation(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
+      }, 2, 1000);
     } catch (err) {
       console.error('Auth check failed:', err);
       setIsAuthenticated(false);
