@@ -220,8 +220,7 @@ export function ExplorePage() {
                     <tr className="bg-gray-800/50">
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Brand</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[20%]">Creators</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Category</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[35%]">Description</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[50%]">Description</th>
                       {isSemanticSearch && (
                         <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[7%]">
                           <div className="flex items-center justify-center gap-1">
@@ -273,12 +272,7 @@ export function ExplorePage() {
                             </div>
                           </td>
                           <td className="px-3 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(brand.product_category).bg} ${getCategoryColor(brand.product_category).text}`}>
-                              {brand.product_category}
-                            </span>
-                          </td>
-                          <td className="px-3 py-4">
-                            <div className="text-sm text-gray-300 line-clamp-2">
+                            <div className="text-sm text-gray-300 line-clamp-3 max-w-none">
                               {brand.description}
                             </div>
                           </td>
