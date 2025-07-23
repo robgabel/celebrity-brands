@@ -256,7 +256,7 @@ export function SemanticSearchBox() {
               )}
             </div>
           </div>
-          {results.slice(0, 5).map((result) => (
+          {results.slice(0, 8).map((result) => (
             <button
               key={result.id}
               onClick={() => handleResultClick(result)}
@@ -278,7 +278,7 @@ export function SemanticSearchBox() {
               </p>
             </button>
           ))}
-          {results.length > 5 && !isKeywordFallback && (
+          {results.length > 8 && !isKeywordFallback && (
             <div className="p-3 bg-gray-750 border-t border-gray-700">
               <button
                 onClick={handleSubmit}
