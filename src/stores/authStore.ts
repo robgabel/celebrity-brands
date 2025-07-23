@@ -2,14 +2,25 @@ import { create } from 'zustand';
 import { supabase, handleSupabaseError, safeSupabaseOperation } from '../lib/supabase';
 import type { AuthState, UserProfile } from '../types/user';
 
+// Email branding for authentication emails
+const EMAIL_BRANDING = `
+
+---
+Celebrity Brands by Rob Gabel
+https://celebritybrands.netlify.app/
+
+For bugs, questions and suggestions please email me at rob@gabel.ai
+`;
+
 interface AuthStore extends AuthState {
   initialize: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  signUp: (email: string, password: string, metadata?: { firstName?: string; lastName?: string; company?: string }) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -79,11 +90,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, rememberMe: boolean = true) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          persistSession: rememberMe
+        }
       });
 
       if (error) {
@@ -134,6 +148,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
+        data: {
+          email_branding: EMAIL_BRANDING
+        }
       });
       
       if (error) {
@@ -211,10 +228,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             first_name: metadata?.firstName || '',
             last_name: metadata?.lastName || '',
-            company: metadata?.company || ''
+            company: metadata?.company || '',
+            email_branding: EMAIL_BRANDING
           }
         }
       });
@@ -266,6 +285,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             isAdmin: profile?.is_admin || false,
             profile: profile || null
           });
+        } else {
+          // User needs to verify email, don't set as authenticated
+          set({ isAuthenticated: false, isAdmin: false, profile: null });
         }
       }
     } catch (error) {
