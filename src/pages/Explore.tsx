@@ -134,27 +134,10 @@ export function ExplorePage() {
             </div>
           </div>
 
-          <div className="mb-4">
+          <div>
             {isSemanticSearch ? (
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Info className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm font-medium text-blue-400">Sorted by AI Relevance</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Results are ranked by semantic similarity to your search query</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      navigate('/explore');
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-900/20 hover:bg-red-800/30 text-red-300 rounded-lg transition-colors border border-red-700/30"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear Search
-                  </button>
-                </div>
+              <div className="relative search-container">
+                <SemanticSearchBox />
               </div>
             ) : (
               <div className="relative search-container">
