@@ -4,6 +4,7 @@ import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { GlobalNav } from '../components/GlobalNav';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -45,20 +46,22 @@ export function ForgotPassword() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-900">
+        <GlobalNav />
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-4">
         <div className="w-full max-w-md text-center">
           <div className="mb-6">
-            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h1>
-            <p className="text-gray-600">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-gray-100 mb-2">Check Your Email</h1>
+            <p className="text-gray-300">
               We've sent a password reset link to <strong>{email}</strong>
             </p>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800 text-left">
+              <Mail className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-200 text-left">
                 <p className="font-medium mb-1">Next steps:</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Check your email inbox (and spam folder)</li>
@@ -84,23 +87,27 @@ export function ForgotPassword() {
 
             <Link
               to="/login"
-              className="flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center justify-center text-gray-400 hover:text-gray-200 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Login
             </Link>
           </div>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-900">
+      <GlobalNav />
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-4">
       <div className="w-full max-w-md">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-gray-700/50">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Forgot Password?</h1>
-          <p className="text-gray-600">
+          <h1 className="text-4xl font-bold mb-2 text-gray-100">Forgot Password?</h1>
+          <p className="text-gray-400">
             No worries! Enter your email address and we'll send you a link to reset your password.
           </p>
         </div>
@@ -109,7 +116,7 @@ export function ForgotPassword() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
               Email Address
             </label>
             <input
@@ -117,7 +124,7 @@ export function ForgotPassword() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-700 text-gray-200 placeholder-gray-400"
               placeholder="Enter your email address"
               required
               autoComplete="email"
@@ -133,19 +140,21 @@ export function ForgotPassword() {
         <div className="mt-6 text-center space-y-4">
           <Link
             to="/login"
-            className="flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center justify-center text-gray-400 hover:text-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Login
           </Link>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/signup" className="text-teal-400 hover:text-teal-300 font-medium">
               Sign up here
             </Link>
           </div>
         </div>
+        </div>
+      </div>
       </div>
     </div>
   );
