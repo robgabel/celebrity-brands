@@ -15,7 +15,8 @@
     "db:status": "echo 'Check your Supabase dashboard for current database status'",
     "db:make-idempotent": "node scripts/make-migrations-idempotent.js",
     "db:validate": "node scripts/validate-migrations.js",
-    "reclassify-all-brands": "tsc scripts/reclassify-all-brands.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext --target ES2022 --esModuleInterop --allowSyntheticDefaultImports && node dist/scripts/reclassify-all-brands.js"
+    "reclassify-all-brands": "tsc scripts/reclassify-all-brands.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext --target ES2022 --esModuleInterop --allowSyntheticDefaultImports && node dist/scripts/reclassify-all-brands.js",
+    "update-missing-fields": "tsc scripts/update-missing-fields.ts --outDir dist/scripts --module NodeNext --moduleResolution NodeNext --target ES2022 --esModuleInterop --allowSyntheticDefaultImports && node dist/scripts/update-missing-fields.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
