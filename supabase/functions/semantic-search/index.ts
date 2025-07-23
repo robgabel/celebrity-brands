@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
     console.log('🔍 Parameters:', {
       embedding_length: embeddingData.data[0].embedding.length,
       match_threshold: 0.0,
-      match_count: 10
+      match_count: 100
     });
 
     // Add detailed logging for the embedding vector
@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
         {
           query_embedding: embeddingData.data[0].embedding,
           match_threshold: 0.0,
-          match_count: 10
+          match_count: 100
         }
       );
       matches = result.data;
