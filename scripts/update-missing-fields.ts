@@ -58,7 +58,7 @@ async function updateMissingFields() {
       .from('brands')
       .select('id, name, creators, logo_url, homepage_url, social_links, approval_status')
       .eq('approval_status', 'approved')
-      .or('logo_url.is.null,homepage_url.is.null,social_links.is.null')
+      .or('logo_url.is.null,homepage_url.is.null,social_links.is.null,product_category.is.null,type_of_influencer.is.null,year_founded.is.null,year_discontinued.is.null,description.is.null')
       .order('id');
 
     if (fetchError) {
