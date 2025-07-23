@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           {
             query_embedding: knownWorkingEmbedding,
             match_threshold: 0.0,
-            match_count: 10
+            match_count: 100
           }
         );
         
@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
         .rpc('match_brands', {
           query_embedding: [0.1, 0.2, 0.3], // tiny test vector
           match_threshold: 0.0,
-          match_count: 1
+          match_count: 100
         });
       console.log('🔍 Function exists - result:', {
         error: functionCheck.error?.message,
