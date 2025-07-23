@@ -218,9 +218,9 @@ export function ExplorePage() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-800/50">
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Brand</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[12%]">Brand</th>
                       <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[20%]">Creators</th>
-                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[50%]">Description</th>
+                      <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[53%]">Description</th>
                       {isSemanticSearch && (
                         <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-[7%]">
                           <div className="flex items-center justify-center gap-1">
@@ -249,7 +249,7 @@ export function ExplorePage() {
                               <div className="relative">
                                 <Link 
                                   to={getBrandUrl(brand)}
-                                  className="font-medium text-gray-100 hover:text-teal-400 truncate max-w-[120px]"
+                                  className="font-medium text-gray-100 hover:text-teal-400 break-words leading-tight"
                                 >
                                   {brand.name}
                                 </Link>
