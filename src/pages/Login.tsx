@@ -14,6 +14,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +22,7 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
@@ -99,6 +100,20 @@ export function Login() {
                   autoComplete="current-password"
                   disabled={isLoading}
                 />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-teal-600 bg-gray-700 border-gray-600 rounded focus:ring-teal-500 focus:ring-2"
+                  disabled={isLoading}
+                />
+                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-300">
+                  Remember me
+                </label>
               </div>
 
               <Button type="submit" isLoading={isLoading} className="w-full">
