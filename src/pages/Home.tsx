@@ -41,7 +41,7 @@ export function HomePage() {
           
           const { data: featuredData, error: featuredError } = await supabase
             .from('brands')
-            .select('*')
+            .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
             .eq('approval_status', 'approved')
             .is('year_discontinued', null)
             .eq('brand_collab', false)
@@ -60,7 +60,7 @@ export function HomePage() {
           
           const { data: recentData, error: recentError } = await supabase
             .from('brands')
-            .select('*')
+            .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
             .eq('approval_status', 'approved')
             .order('created_at', { ascending: false })
             .limit(8);

@@ -226,7 +226,7 @@ export function useBrandsData(): UseBrandsDataReturn {
       setLoading(true);
       let query = supabase
         .from('brands')
-        .select('*', { count: 'exact' });
+        .select('id, name, creators, product_category, description, year_founded, brand_collab, logo_url, created_at, approval_status, type_of_influencer', { count: 'exact' });
       
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
@@ -284,7 +284,7 @@ export function useBrandsData(): UseBrandsDataReturn {
         // Get the actual count for current filters
         let countQuery = supabase
           .from('brands')
-          .select('*', { count: 'exact', head: true });
+          .select('id', { count: 'exact', head: true });
         
         if (!isAdmin) {
           countQuery = countQuery.eq('approval_status', 'approved');
