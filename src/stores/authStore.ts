@@ -243,29 +243,40 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       if (data.user) {
-        // Check if user profile already exists
-        const { data: existingProfile } = await supabase
+        // Check if user profile already exists and handle potential conflicts
+        const { data: existingProfile, error: profileCheckError } = await supabase
           .from('user_profiles')
           .select('id')
           .eq('auth_id', data.user.id)
-          .single();
+          .maybeSingle();
+
+        if (profileCheckError) {
+          console.error('Error checking existing profile:', profileCheckError);
+          // Continue anyway, the insert will handle conflicts
+        }
 
         // Only create profile if it doesn't exist
         if (!existingProfile) {
           const { error: profileError } = await supabase
             .from('user_profiles')
-            .insert({
+            .upsert({
               auth_id: data.user.id,
               email: data.user.email,
               first_name: metadata?.firstName || null,
               last_name: metadata?.lastName || null,
               company: metadata?.company || null,
               is_admin: false
+            }, {
+              onConflict: 'auth_id',
+              ignoreDuplicates: false
             });
 
           if (profileError) {
-            console.error('Error creating user profile:', profileError);
-            // Don't throw here as the user was created successfully
+            console.error('Error creating/updating user profile:', profileError);
+            // Only throw if it's not a duplicate key error
+            if (!profileError.message.includes('duplicate key') && !profileError.code === '23505') {
+              throw new Error('Failed to create user profile: ' + profileError.message);
+            }
           }
         }
 
@@ -276,7 +287,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
               .from('user_profiles')
               .select('*')
               .eq('auth_id', data.user.id)
-              .single(),
+              .maybeSingle(),
             'fetch user profile after signup'
           );
 
