@@ -201,6 +201,12 @@ export function ExplorePage() {
               disabled={!!semanticQuery}
             >
               Clear
+            </Button>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="relative">
             {/* Outer ring */}
@@ -215,12 +221,6 @@ export function ExplorePage() {
             <p className="text-gray-500 text-sm">Discovering amazing creator brands</p>
           </div>
         </div>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading brands...</p>
-          </div>
         ) : (
           <>
             {viewMode === 'list' ? (
