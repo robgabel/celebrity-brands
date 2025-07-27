@@ -201,9 +201,19 @@ export function ExplorePage() {
               disabled={!!semanticQuery}
             >
               Clear
-            </Button>
-            </div>
-          )}
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="relative">
+            {/* Outer ring */}
+            <div className="w-16 h-16 border-4 border-gray-700/30 rounded-full"></div>
+            {/* Spinning gradient ring */}
+            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-teal-500 border-r-teal-400 rounded-full animate-spin"></div>
+            {/* Inner pulsing dot */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-gray-300 font-medium mb-1">Loading brands...</p>
+            <p className="text-gray-500 text-sm">Discovering amazing creator brands</p>
+          </div>
         </div>
 
         {loading ? (
