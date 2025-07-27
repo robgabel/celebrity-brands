@@ -169,6 +169,9 @@ export function useBrandsData(): UseBrandsDataReturn {
       try {
         setError(null);
         setLoading(true);
+        // Temporary delay to see loading spinner - remove this later
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -224,6 +227,9 @@ export function useBrandsData(): UseBrandsDataReturn {
   const fetchBrands = useCallback(async () => {
     try {
       setLoading(true);
+      // Temporary delay to see loading spinner - remove this later
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       let query = supabase
         .from('brands')
         .select('id, name, creators, product_category, description, year_founded, brand_collab, logo_url, created_at, approval_status, type_of_influencer', { count: 'exact' });
