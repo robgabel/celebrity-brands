@@ -208,7 +208,7 @@ export function ExplorePage() {
         </div>
 
         {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
+        <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
           <div className="relative">
             {/* Outer ring */}
             <div className="w-16 h-16 border-4 border-gray-700/30 rounded-full"></div>
@@ -220,6 +220,9 @@ export function ExplorePage() {
           <div className="mt-6 text-center">
             <p className="text-gray-300 font-medium mb-1">Loading brands...</p>
             <p className="text-gray-500 text-sm">Discovering amazing creator brands</p>
+          </div>
+          <div className="mt-4 text-xs text-gray-600">
+            Debug: Loading state is {loading ? 'TRUE' : 'FALSE'}
           </div>
         </div>
         ) : (

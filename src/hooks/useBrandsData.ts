@@ -226,10 +226,12 @@ export function useBrandsData(): UseBrandsDataReturn {
 
   const fetchBrands = useCallback(async () => {
     try {
+      console.log('🔄 Starting fetchBrands, setting loading to true');
       setLoading(true);
       setError(null);
       // Temporary delay to see loading spinner - remove this later
       await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log('⏳ Delay completed, now fetching data');
       
       let query = supabase
         .from('brands')
