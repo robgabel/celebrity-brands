@@ -169,9 +169,6 @@ export function useBrandsData(): UseBrandsDataReturn {
       try {
         setError(null);
         setLoading(true);
-        // Temporary delay to see loading spinner - remove this later
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
         
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -233,9 +230,6 @@ export function useBrandsData(): UseBrandsDataReturn {
       console.log('🔄 Starting fetchBrands, setting loading to true');
       setLoading(true);
       setError(null);
-      // Temporary delay to see loading spinner - remove this later
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('⏳ Delay completed, now fetching data');
       
       let query = supabase
         .from('brands')
