@@ -13,6 +13,7 @@ import { AgentBossControlCenter } from './pages/AgentBossControlCenter';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { SuggestBrand } from './pages/SuggestBrand';
+import { ToastContainer } from './components/ToastContainer';
 
 function App() {
   const initialize = useAuthStore(state => state.initialize);
@@ -23,6 +24,7 @@ function App() {
 
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />

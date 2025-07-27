@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getBrandNews } from '../lib/newsApi';
+import { useToastStore } from '../stores/toastStore';
 
 interface NewsArticle {
   title: string;
@@ -56,6 +57,7 @@ interface UseBrandDetailsDataReturn {
 export function useBrandDetailsData(): UseBrandDetailsDataReturn {
   const { brandSlug } = useParams();
   const navigate = useNavigate();
+  const addToast = useToastStore(state => state.addToast);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -187,6 +189,13 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
   const handleGenerateStory = useCallback(async (version: 'v1' | 'v2', notes?: string) => {
     if (!brand) return;
 
+    // Show toast notification that Petra is working
+    const toastId = addToast({
+      message: "Petra is researching and writing the brand story",
+      type: 'info',
+      duration: 0 // Don't auto-dismiss, we'll remove it manually
+    });
+
     setIsGeneratingStory(true);
     setStoryError(null);
 
@@ -252,6 +261,14 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
       console.log('🔄 Refreshing brand details...');
       await fetchBrandDetails();
       
+      // Remove the working toast and show success
+      useToastStore.getState().removeToast(toastId);
+      addToast({
+        message: `Brand story generated successfully using ${version === 'v2' ? 'Zero to Hero' : 'Classic'} format!`,
+        type: 'success',
+        duration: 5000
+      });
+      
     } catch (err: any) {
       console.error('Error generating brand story:', err);
       
@@ -267,10 +284,18 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
       }
       
       setStoryError(userMessage);
+      
+      // Remove the working toast and show error
+      useToastStore.getState().removeToast(toastId);
+      addToast({
+        message: `Failed to generate brand story: ${userMessage}`,
+        type: 'error',
+        duration: 8000
+      });
     } finally {
       setIsGeneratingStory(false);
     }
-  }, [brand, fetchBrandDetails]);
+  }, [brand, fetchBrandDetails, addToast]);
 
   useEffect(() => {
     checkAdminStatus();
