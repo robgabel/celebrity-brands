@@ -46,7 +46,7 @@ export function useBrandsData(): UseBrandsDataReturn {
   const [semanticResults, setSemanticResults] = useState<Brand[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [searchInput, setSearchInput] = useState(searchQuery || '');
   const [debouncedSearchQuery] = useDebounce(searchInput, 300);
   const [sortBy, setSortBy] = useState<string>('az');
@@ -82,7 +82,7 @@ export function useBrandsData(): UseBrandsDataReturn {
   }, [resetPagination, semanticQuery]);
 
   const checkAuth = useCallback(async () => {
-    setLoading(false);
+    // Don't set loading to false here - let the data fetching functions handle it
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -213,7 +213,9 @@ export function useBrandsData(): UseBrandsDataReturn {
         setBrands(matches.results || matches);
         setTotalItems((matches.results || matches).length);
         setSemanticResults(matches.results || matches);
-        checkAuth();
+        await checkAuth();
+        console.log('✅ Semantic search completed, setting loading to false');
+        setLoading(false);
         return;
       } catch (err: any) {
         console.error('Semantic search error:', err);
@@ -348,6 +350,7 @@ export function useBrandsData(): UseBrandsDataReturn {
         setError(`Failed to load brands: ${error?.message || 'Unknown error'}`);
       }
     } finally {
+      console.log('✅ fetchBrands completed, setting loading to false');
       setLoading(false);
     }
   }, [currentPage, itemsPerPage, showFavoritesOnly, debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, isAdmin, favoriteIds]);
