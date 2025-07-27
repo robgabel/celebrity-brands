@@ -277,7 +277,7 @@ export function useBrandsData(): UseBrandsDataReturn {
       
       const { data, error, count } = await query
         .range(start, end)
-        .single(false);
+        ;
 
       if (error) {
         console.error('Supabase query error:', error);
