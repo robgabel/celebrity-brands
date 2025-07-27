@@ -385,20 +385,19 @@ export function useBrandsData(): UseBrandsDataReturn {
       fetchBrands();
     }
 
-    // These can run regardless of the search type
-    checkAuth();
-    fetchFounderTypes();
-    fetchProductCategories();
 
   }, [
     semanticQuery,
     handleSemanticSearch,
     fetchBrands,
-    checkAuth,
-    fetchFounderTypes,
-    fetchProductCategories
   ]);
 
+  useEffect(() => {
+    // These can run regardless of the search type
+    checkAuth();
+    fetchFounderTypes();
+    fetchProductCategories();
+  }, [checkAuth, fetchFounderTypes, fetchProductCategories]);
   useEffect(() => {
     if (isAuthenticated) {
       fetchFavorites();
