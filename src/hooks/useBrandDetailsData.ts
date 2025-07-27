@@ -191,33 +191,82 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
     setStoryError(null);
 
     try {
-      const endpoint = version === 'v1' ? 'generate-brand-story' : 'generate-brand-story-v2';
+      console.log('🚀 Starting story generation:', { version, brandId: brand.id, hasNotes: !!notes });
+      
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ brandId: brand.id, notes })
+          body: JSON.stringify({ 
+            brandId: brand.id, 
+            notes: notes?.trim() || undefined,
+            version 
+          })
         }
       );
 
+      console.log('📡 Response received:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok 
+      });
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate brand story');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('❌ Server error response:', errorData);
+        } catch (parseError) {
+          console.error('❌ Could not parse error response:', parseError);
+          const errorText = await response.text();
+          console.error('❌ Raw error response:', errorText);
+        }
+        
+        throw new Error(errorMessage);
       }
         
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+        console.log('✅ Story generation successful:', {
+          hasStory: !!result.story,
+          version: result.version,
+          success: result.success
+        });
+      } catch (parseError) {
+        console.error('❌ Could not parse success response:', parseError);
+        throw new Error('Invalid response format from story generator');
+      }
+      
       if (!result) {
         throw new Error('Empty response from story generator');
       }
 
+      // Refresh the brand details to show the new story
+      console.log('🔄 Refreshing brand details...');
       await fetchBrandDetails();
+      
     } catch (err: any) {
       console.error('Error generating brand story:', err);
-      setStoryError(err.error || err.message || 'Failed to generate brand story');
+      
+      // Provide user-friendly error messages
+      let userMessage = err.message || 'Failed to generate brand story';
+      
+      if (err.message?.includes('rate limit')) {
+        userMessage = 'Rate limit exceeded. Please wait a few minutes before trying again.';
+      } else if (err.message?.includes('Authentication failed')) {
+        userMessage = 'Authentication error. Please refresh the page and try again.';
+      } else if (err.message?.includes('Network error') || err.message?.includes('Failed to fetch')) {
+        userMessage = 'Network connection error. Please check your internet connection and try again.';
+      }
+      
+      setStoryError(userMessage);
     } finally {
       setIsGeneratingStory(false);
     }
