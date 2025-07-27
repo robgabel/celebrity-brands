@@ -46,7 +46,8 @@ export function ExplorePage() {
     clearFilters,
     handleFavoriteChange,
     handleApprove,
-    semanticResults
+    semanticResults,
+    error = null
   } = useBrandsData();
 
   // Helper function to get match percentage color
