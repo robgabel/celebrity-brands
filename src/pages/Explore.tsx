@@ -422,6 +422,17 @@ export function ExplorePage() {
             )}
           </>
         )}
+        
+        {/* Debug info - remove after testing */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-4 bg-gray-800 rounded-lg text-sm text-gray-400">
+            <p>Debug Info:</p>
+            <p>Loading: {loading.toString()}</p>
+            <p>Error: {error || 'none'}</p>
+            <p>Brands count: {brands.length}</p>
+            <p>Total items: {totalItems}</p>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

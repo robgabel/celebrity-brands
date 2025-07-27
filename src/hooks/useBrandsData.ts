@@ -227,6 +227,7 @@ export function useBrandsData(): UseBrandsDataReturn {
   const fetchBrands = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       // Temporary delay to see loading spinner - remove this later
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -276,15 +277,18 @@ export function useBrandsData(): UseBrandsDataReturn {
       
       const { data, error, count } = await query
         .range(start, end)
-        .throwOnError();
+        .single(false);
 
       if (error) {
+        console.error('Supabase query error:', error);
         throw error;
       }
 
       setBrands(data || []);
       setTotalItems(count || 0);
+      console.log('Brands fetched successfully:', { count: data?.length, total: count });
     } catch (error) {
+      console.error('Error in fetchBrands:', error);
       // Handle pagination range error
       if (error?.code === 'PGRST103' || error?.message?.includes('Requested range not satisfiable')) {
         // Get the actual count for current filters
@@ -339,7 +343,7 @@ export function useBrandsData(): UseBrandsDataReturn {
         }
       } else {
         console.error('Error fetching brands:', error);
-        setError('Failed to load brands');
+        setError(`Failed to load brands: ${error?.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
