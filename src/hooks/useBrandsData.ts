@@ -201,7 +201,9 @@ export function useBrandsData(): UseBrandsDataReturn {
           if (fetchError.message === 'Failed to fetch') {
             throw new Error('Unable to connect to search service. Please check your internet connection and try again.');
           }
-          throw new Error(`Network error: ${fetchError.message}`);
+          // Handle cases where fetchError.message might be undefined
+          const errorMessage = fetchError?.message || fetchError?.toString() || 'Unknown network error';
+          throw new Error(`Network error: ${errorMessage}`);
         }
 
         if (!response.ok) {
