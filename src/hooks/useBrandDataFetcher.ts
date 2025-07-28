@@ -94,6 +94,19 @@ export function useBrandDataFetcher({
 
   const fetchBrands = useCallback(async () => {
     try {
+      console.log('🔍 fetchBrands called with parameters:', {
+        debouncedSearchQuery,
+        categoryFilter,
+        founderFilter,
+        typeFilter,
+        sortBy,
+        showFavoritesOnly,
+        favoriteIds: favoriteIds.length,
+        currentPage,
+        itemsPerPage,
+        isAdmin
+      });
+      
       setLoading(true);
       setError(null);
       
@@ -101,8 +114,11 @@ export function useBrandDataFetcher({
         .from('brands')
         .select('id, name, creators, product_category, description, year_founded, brand_collab, logo_url, created_at, approval_status, type_of_influencer', { count: 'exact' });
       
+      console.log('🗄️ Base query created');
+      
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
+        console.log('🔒 Added approval_status filter (not admin)');
       }
 
       if (debouncedSearchQuery) {
@@ -111,22 +127,29 @@ export function useBrandDataFetcher({
           `name.ilike.${searchPattern},` +
           `creators.ilike.${searchPattern}`
         );
+        console.log('🔍 Added search filter:', searchPattern);
       }
 
       if (categoryFilter !== 'All Categories') {
         query = query.eq('product_category', categoryFilter);
+        console.log('📂 Added category filter:', categoryFilter);
       }
 
       if (founderFilter !== 'All Founder Types') {
         query = query.eq('type_of_influencer', founderFilter);
+        console.log('👤 Added founder filter:', founderFilter);
       }
 
       if (typeFilter !== 'All Types') {
         query = query.eq('brand_collab', typeFilter === 'Collab');
+        console.log('🏷️ Added type filter:', typeFilter, '-> brand_collab:', typeFilter === 'Collab');
       }
 
       if (showFavoritesOnly && favoriteIds.length > 0) {
         query = query.in('id', favoriteIds);
+        console.log('❤️ Added favorites filter:', favoriteIds);
+      } else if (showFavoritesOnly && favoriteIds.length === 0) {
+        console.log('⚠️ Favorites filter enabled but no favorite IDs available');
       }
 
       const sortOptions = [
@@ -137,11 +160,24 @@ export function useBrandDataFetcher({
 
       const selectedSort = sortOptions.find(option => option.value === sortBy) || sortOptions[0];
       query = query.order(selectedSort.field, { ascending: selectedSort.ascending });
+      console.log('📊 Added sort:', selectedSort);
 
       const start = (currentPage - 1) * itemsPerPage;
       const end = start + itemsPerPage - 1;
+      console.log('📄 Pagination range:', { start, end, currentPage, itemsPerPage });
       
       const { data, error, count } = await query.range(start, end);
+
+      console.log('📊 Supabase query results:', {
+        data: data ? `${data.length} brands` : 'null',
+        error: error ? error.message : 'none',
+        count: count,
+        firstBrand: data?.[0] ? {
+          id: data[0].id,
+          name: data[0].name,
+          approval_status: data[0].approval_status
+        } : 'none'
+      });
 
       if (error) {
         console.error('Supabase query error:', error);
@@ -150,6 +186,11 @@ export function useBrandDataFetcher({
 
       setBrands(data || []);
       setTotalItems(count || 0);
+      
+      console.log('✅ State updated:', {
+        brandsCount: (data || []).length,
+        totalItems: count || 0
+      });
     } catch (error: any) {
       console.error('Error in fetchBrands:', error);
       
