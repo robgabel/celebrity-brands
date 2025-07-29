@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Brand } from '../types/brand';
@@ -371,16 +372,31 @@ export function useBrandDataFetcher({
     }
   }, [fetchBrands]);
 
+  // Add a ref to track if we're already fetching to prevent multiple simultaneous calls
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log('🔄 USE EFFECT: Already fetching, skipping...');
+      return;
+    }
+
     console.log('🔄 USE EFFECT: Triggered with semanticQuery:', semanticQuery);
     setDebugInfo(prev => ({ ...prev, useEffectTriggered: true, semanticQuery }));
     
+    isFetchingRef.current = true;
+
     if (semanticQuery) {
       console.log('🔄 USE EFFECT: Calling handleSemanticSearch');
-      handleSemanticSearch();
+      handleSemanticSearch().finally(() => {
+        isFetchingRef.current = false;
+      });
     } else {
       console.log('🔄 USE EFFECT: Calling fetchBrands');
-      fetchBrands();
+      fetchBrands().finally(() => {
+        isFetchingRef.current = false;
+      });
     }
   }
   )
