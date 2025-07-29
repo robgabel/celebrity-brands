@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Calendar } from 'lucide-react';
@@ -22,11 +22,6 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [totalBrands, setTotalBrands] = useState<number>(0);
-
-  useEffect(() => {
-    checkAuth();
-    fetchHomeData();
-  }, []);
 
   const fetchHomeData = useCallback(async () => {
     if (loading) return; // Prevent multiple simultaneous calls
@@ -112,6 +107,7 @@ export function HomePage() {
   useEffect(() => {
     checkAuth();
     fetchHomeData();
+  }, []);
   
   if (error) {
     return (
