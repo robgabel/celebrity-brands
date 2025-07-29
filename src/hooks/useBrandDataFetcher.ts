@@ -270,6 +270,20 @@ export function useBrandDataFetcher({
       console.error('💥 FETCH BRANDS: Error in fetchBrands:', error);
       setDebugInfo(prev => ({ ...prev, fetchError: error.message }));
       
+      // Enhanced error handling for network issues
+      if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
+        console.error('🌐 NETWORK ERROR: Connection to Supabase failed');
+        console.error('🔍 Debugging info:', {
+          supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+          hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+          timestamp: new Date().toISOString()
+        });
+        
+        setError('Unable to connect to the database. Please check your internet connection and try refreshing the page.');
+      } else {
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      }
+      
       if (error?.code === 'PGRST103' || error?.message?.includes('Requested range not satisfiable')) {
         console.log('🔄 FETCH BRANDS: Handling pagination range error...');
         // Handle pagination range error
@@ -322,8 +336,6 @@ export function useBrandDataFetcher({
           console.error('💥 FETCH BRANDS: Error getting count:', countError);
           setError('Failed to load brands');
         }
-      } else {
-        setError(`Failed to load brands: ${error?.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
