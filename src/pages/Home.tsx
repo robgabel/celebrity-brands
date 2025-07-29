@@ -25,77 +25,79 @@ export function HomePage() {
 
   useEffect(() => {
     checkAuth();
-    const fetchHomeData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Use retry logic for all database operations
-        await retrySupabaseOperation(async () => {
-          const { count: brandsCount } = await supabase
-            .from('brands')
-            .select('*', { count: 'exact', head: true })
-            .eq('approval_status', 'approved');
-          
-          setTotalBrands(brandsCount || 0);
-          
-          const { data: featuredData, error: featuredError } = await supabase
-            .from('brands')
-            .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
-            .eq('approval_status', 'approved')
-            .is('year_discontinued', null)
-            .eq('brand_collab', false)
-            .order('id', { ascending: false })
-            .limit(20);
-            
-          if (featuredError) throw featuredError;
-          
-          // Randomly select 4 brands from the results
-          if (featuredData && featuredData.length > 0) {
-            const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
-            setFeaturedBrands(shuffled.slice(0, 4));
-          } else {
-            setFeaturedBrands([]);
-          }
-          
-          const { data: recentData, error: recentError } = await supabase
-            .from('brands')
-            .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
-            .eq('approval_status', 'approved')
-            .order('created_at', { ascending: false })
-            .limit(8);
-            
-          if (recentError) throw recentError;
-          setRecentBrands(recentData || []);
-          
-          const { data: categoryData, error: categoryError } = await supabase
-            .from('brands')
-            .select('product_category')
-            .eq('approval_status', 'approved');
-            
-          if (categoryError) throw categoryError;
-          
-          if (categoryData) {
-            const uniqueCategories = Array.from(
-              new Set(categoryData.map(item => item.product_category))
-            ).filter(Boolean) as string[];
-            
-            setCategories(uniqueCategories.sort());
-          }
-        }, 3, 2000);
-        
-      } catch (err: any) {
-        console.error('Error fetching home data:', err);
-        setError(err.message || 'Failed to connect to the database. Please check your internet connection and try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchHomeData();
   }, []);
 
-  const checkAuth = async () => {
+  const fetchHomeData = useCallback(async () => {
+    if (loading) return; // Prevent multiple simultaneous calls
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use retry logic for all database operations
+      await retrySupabaseOperation(async () => {
+        const { count: brandsCount } = await supabase
+          .from('brands')
+          .select('*', { count: 'exact', head: true })
+          .eq('approval_status', 'approved');
+        
+        setTotalBrands(brandsCount || 0);
+        
+        const { data: featuredData, error: featuredError } = await supabase
+          .from('brands')
+          .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
+          .eq('approval_status', 'approved')
+          .is('year_discontinued', null)
+          .eq('brand_collab', false)
+          .order('id', { ascending: false })
+          .limit(20);
+          
+        if (featuredError) throw featuredError;
+        
+        // Randomly select 4 brands from the results
+        if (featuredData && featuredData.length > 0) {
+          const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
+          setFeaturedBrands(shuffled.slice(0, 4));
+        } else {
+          setFeaturedBrands([]);
+        }
+        
+        const { data: recentData, error: recentError } = await supabase
+          .from('brands')
+          .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
+          .eq('approval_status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(8);
+          
+        if (recentError) throw recentError;
+        setRecentBrands(recentData || []);
+        
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('brands')
+          .select('product_category')
+          .eq('approval_status', 'approved');
+          
+        if (categoryError) throw categoryError;
+        
+        if (categoryData) {
+          const uniqueCategories = Array.from(
+            new Set(categoryData.map(item => item.product_category))
+          ).filter(Boolean) as string[];
+          
+          setCategories(uniqueCategories.sort());
+        }
+      }, 3, 2000);
+      
+    } catch (err: any) {
+      console.error('Error fetching home data:', err);
+      setError(err.message || 'Failed to connect to the database. Please check your internet connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loading]);
+
+  const checkAuth = useCallback(async () => {
     try {
       await retrySupabaseOperation(async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -105,7 +107,11 @@ export function HomePage() {
       console.error('Auth check failed:', err);
       setIsAuthenticated(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+    fetchHomeData();
   
   if (error) {
     return (
