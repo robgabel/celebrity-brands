@@ -221,9 +221,15 @@ export function ExplorePage() {
             <p className="text-gray-300 font-medium mb-1">Loading brands...</p>
             <p className="text-gray-500 text-sm">Discovering amazing creator brands</p>
           </div>
-          <div className="mt-4 text-xs text-gray-600">
-            Debug: Loading state is {loading ? 'TRUE' : 'FALSE'}
-          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 text-xs text-gray-600 max-w-md">
+              <p>Debug: Loading state is {loading ? 'TRUE' : 'FALSE'}</p>
+              <p>Total brands: {totalItems}</p>
+              <p>Brands array length: {brands.length}</p>
+              <p>Error: {error || 'none'}</p>
+              <p className="mt-2 text-gray-500">Check browser console for detailed logs</p>
+            </div>
+          )}
         </div>
         ) : (
           <>
@@ -429,12 +435,37 @@ export function ExplorePage() {
         
         {/* Debug info - remove after testing */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-4 bg-gray-800 rounded-lg text-sm text-gray-400">
-            <p>Debug Info:</p>
-            <p>Loading: {loading.toString()}</p>
-            <p>Error: {error || 'none'}</p>
-            <p>Brands count: {brands.length}</p>
-            <p>Total items: {totalItems}</p>
+          <div className="mt-8 p-6 bg-gray-800 rounded-lg border border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-200 mb-4">🐛 Debug Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-gray-300 mb-2">State</h4>
+                <div className="space-y-1 text-gray-400">
+                  <p>Loading: <span className={loading ? 'text-yellow-400' : 'text-green-400'}>{loading.toString()}</span></p>
+                  <p>Error: <span className={error ? 'text-red-400' : 'text-green-400'}>{error || 'none'}</span></p>
+                  <p>Brands count: <span className="text-blue-400">{brands.length}</span></p>
+                  <p>Total items: <span className="text-blue-400">{totalItems}</span></p>
+                  <p>Is semantic search: <span className="text-purple-400">{!!semanticQuery}</span></p>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-300 mb-2">Filters</h4>
+                <div className="space-y-1 text-gray-400">
+                  <p>Search: <span className="text-blue-400">{searchInput || 'none'}</span></p>
+                  <p>Category: <span className="text-blue-400">{categoryFilter}</span></p>
+                  <p>Founder: <span className="text-blue-400">{founderFilter}</span></p>
+                  <p>Type: <span className="text-blue-400">{typeFilter}</span></p>
+                  <p>Sort: <span className="text-blue-400">{sortBy}</span></p>
+                  <p>Favorites only: <span className="text-blue-400">{showFavoritesOnly.toString()}</span></p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-gray-900 rounded text-xs text-gray-500">
+              <p className="font-medium mb-1">💡 Debugging Tips:</p>
+              <p>1. Open browser console (F12) for detailed logs</p>
+              <p>2. Look for logs starting with 🔍, 🗄️, 📊, etc.</p>
+              <p>3. Check network tab for failed API calls</p>
+            </div>
           </div>
         )}
       </main>
