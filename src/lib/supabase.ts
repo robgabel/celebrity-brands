@@ -35,8 +35,9 @@ export const handleSupabaseError = (error: any, operation: string): never => {
   console.error(`Supabase ${operation} error:`, error);
 
   // Network errors
-  if (error.message === 'Failed to fetch') {
-    throw new Error('Unable to connect to the database. Please check your internet connection and try again. If the problem persists, the service may be temporarily unavailable.');
+  if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+    console.error('Network connectivity issue detected. Supabase URL:', supabaseUrl);
+    throw new Error('Unable to connect to the database. This could be due to:\n1. Network connectivity issues\n2. Supabase service temporarily unavailable\n3. Incorrect environment variables\n4. Firewall/VPN blocking the connection\n\nPlease check your connection and try again.');
   }
 
   // Database connection errors
