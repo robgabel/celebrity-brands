@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
       const functionCheck = await supabaseClient
         .rpc('match_brands', {
           query_embedding: [0.1, 0.2, 0.3], // tiny test vector
-          match_threshold: 0.0,
+          match_threshold: 0.25,
           match_count: 100
         });
       console.log('🔍 Function exists - result:', {
@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
     console.log('🔍 Calling match_brands RPC function...');
     console.log('🔍 Parameters:', {
       embedding_length: embeddingData.data[0].embedding.length,
-      match_threshold: 0.0,
+      match_threshold: 0.25,
       match_count: 100
     });
 
@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
         'match_brands',
         {
           query_embedding: embeddingData.data[0].embedding,
-          match_threshold: 0.0,
+          match_threshold: 0.25,
           match_count: 100
         }
       );
