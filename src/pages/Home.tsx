@@ -107,7 +107,7 @@ export function HomePage() {
   useEffect(() => {
     checkAuth();
     fetchHomeData();
-  }, []);
+  }, [checkAuth, fetchHomeData]);
   
   if (error) {
     return (
