@@ -370,6 +370,8 @@ export function useBrandDataFetcher({
       console.log('🔄 USE EFFECT: Calling fetchBrands');
       fetchBrands();
     }
+  }
+  )
 
   // Add debug info to console for easy inspection
   useEffect(() => {
