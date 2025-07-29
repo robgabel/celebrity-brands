@@ -333,14 +333,14 @@ export function useBrandDataFetcher({
   }, [
     currentPage,
     itemsPerPage,
-    showFavoritesOnly,
     debouncedSearchQuery,
     categoryFilter,
     founderFilter,
     typeFilter,
     sortBy,
+    showFavoritesOnly,
     isAdmin,
-    favoriteIds,
+    favoriteIds.length, // Use length instead of the array to prevent infinite loops
     setCurrentPage
   ]);
 
@@ -370,7 +370,6 @@ export function useBrandDataFetcher({
       console.log('🔄 USE EFFECT: Calling fetchBrands');
       fetchBrands();
     }
-  }, [semanticQuery, handleSemanticSearch, fetchBrands]);
 
   // Add debug info to console for easy inspection
   useEffect(() => {
