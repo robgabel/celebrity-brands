@@ -51,6 +51,10 @@ export function useBrandDataFetcher({
 
   // Add debug state to track what's happening
   const [debugInfo, setDebugInfo] = useState<any>({});
+  
+  // Add a ref to track if we're already fetching to prevent multiple simultaneous calls
+  const isFetchingRef = useRef(false);
+
   const handleSemanticSearch = useCallback(async () => {
     if (!semanticQuery) return;
 
@@ -341,8 +345,20 @@ export function useBrandDataFetcher({
     } finally {
       setLoading(false);
       console.log('🏁 FETCH BRANDS: Loading completed, setting loading to false');
+      isFetchingRef.current = false;
     }
-  }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
+  }, [
+    debouncedSearchQuery,
+    categoryFilter,
+    founderFilter,
+    typeFilter,
+    sortBy,
+    showFavoritesOnly,
+    favoriteIds.length,
+    currentPage,
+    itemsPerPage,
+    isAdmin
+  ]);
 
   const handleApprove = useCallback(async (brandId: number) => {
     try {
@@ -358,9 +374,6 @@ export function useBrandDataFetcher({
       console.error('Error approving brand:', err);
     }
   }, [fetchBrands]);
-
-  // Add a ref to track if we're already fetching to prevent multiple simultaneous calls
-  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     // Prevent multiple simultaneous fetches
@@ -387,12 +400,14 @@ export function useBrandDataFetcher({
     }
   }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
 
-  // Separate useEffect for non-semantic search that depends on filters
+  // Single useEffect for non-semantic search
   useEffect(() => {
-    // Only run for non-semantic searches
-    if (semanticQuery) return;
-    
-    // Prevent multiple simultaneous fetches
+    // Skip if semantic search or already fetching
+    if (semanticQuery || isFetchingRef.current) {
+      console.log('🔄 FILTER EFFECT: Skipping - semantic search or already fetching');
+      return;
+    }
+
     if (isFetchingRef.current) {
       console.log('🔄 FILTER EFFECT: Already fetching, skipping...');
       return;
@@ -401,21 +416,8 @@ export function useBrandDataFetcher({
     console.log('🔄 FILTER EFFECT: Triggered by filter change');
     
     isFetchingRef.current = true;
-    fetchBrands().finally(() => {
-      isFetchingRef.current = false;
-    });
-  }, [
-    currentPage,
-    itemsPerPage,
-    debouncedSearchQuery,
-    categoryFilter,
-    founderFilter,
-    typeFilter,
-    sortBy,
-    showFavoritesOnly,
-    isAdmin,
-    favoriteIds.length
-  ]);
+    fetchBrands();
+  }, [fetchBrands, semanticQuery]);
 
   // Add debug info to console for easy inspection
   useEffect(() => {
