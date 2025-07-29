@@ -341,21 +341,7 @@ export function useBrandDataFetcher({
     } finally {
       setLoading(false);
       console.log('🏁 FETCH BRANDS: Loading completed, setting loading to false');
-      setDebugInfo(prev => ({ ...prev, loadingCompleted: true, finalLoadingState: false }));
-    }
-  }, [
-    currentPage,
-    itemsPerPage,
-    debouncedSearchQuery,
-    categoryFilter,
-    founderFilter,
-    typeFilter,
-    sortBy,
-    showFavoritesOnly,
-    isAdmin,
-    favoriteIds.length, // Use length instead of the array to prevent infinite loops
-    setCurrentPage
-  ]);
+  }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
 
   const handleApprove = useCallback(async (brandId: number) => {
     try {
@@ -400,6 +386,36 @@ export function useBrandDataFetcher({
     }
   }
   )
+
+  // Separate useEffect for non-semantic search that depends on filters
+  useEffect(() => {
+    // Only run for non-semantic searches
+    if (semanticQuery) return;
+    
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log('🔄 FILTER EFFECT: Already fetching, skipping...');
+      return;
+    }
+
+    console.log('🔄 FILTER EFFECT: Triggered by filter change');
+    
+    isFetchingRef.current = true;
+    fetchBrands().finally(() => {
+      isFetchingRef.current = false;
+    });
+  }, [
+    currentPage,
+    itemsPerPage,
+    debouncedSearchQuery,
+    categoryFilter,
+    founderFilter,
+    typeFilter,
+    sortBy,
+    showFavoritesOnly,
+    isAdmin,
+    favoriteIds.length
+  ]);
 
   // Add debug info to console for easy inspection
   useEffect(() => {
