@@ -342,7 +342,22 @@ export function useBrandDataFetcher({
       setLoading(false);
       console.log('🏁 FETCH BRANDS: Loading completed, setting loading to false');
     }
-  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage]);
+  }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
+
+  const handleApprove = useCallback(async (brandId: number) => {
+    try {
+      const { error } = await supabase
+        .from('brands')
+        .update({ approval_status: 'approved' })
+        .eq('id', brandId);
+
+      if (error) throw error;
+
+      await fetchBrands();
+    } catch (err) {
+      console.error('Error approving brand:', err);
+    }
+  }, [fetchBrands]);
 
   // Add a ref to track if we're already fetching to prevent multiple simultaneous calls
   const isFetchingRef = useRef(false);
@@ -370,22 +385,37 @@ export function useBrandDataFetcher({
         isFetchingRef.current = false;
       });
     }
-  }, [semanticQuery, handleSemanticSearch, fetchBrands]);
+  }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
 
-  const handleApprove = useCallback(async (brandId: number) => {
-    try {
-      const { error } = await supabase
-        .from('brands')
-        .update({ approval_status: 'approved' })
-        .eq('id', brandId);
-
-      if (error) throw error;
-
-      await fetchBrands();
-    } catch (err) {
-      console.error('Error approving brand:', err);
+  // Separate useEffect for non-semantic search that depends on filters
+  useEffect(() => {
+    // Only run for non-semantic searches
+    if (semanticQuery) return;
+    
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log('🔄 FILTER EFFECT: Already fetching, skipping...');
+      return;
     }
-  }, [fetchBrands]);
+
+    console.log('🔄 FILTER EFFECT: Triggered by filter change');
+    
+    isFetchingRef.current = true;
+    fetchBrands().finally(() => {
+      isFetchingRef.current = false;
+    });
+  }, [
+    currentPage,
+    itemsPerPage,
+    debouncedSearchQuery,
+    categoryFilter,
+    founderFilter,
+    typeFilter,
+    sortBy,
+    showFavoritesOnly,
+    isAdmin,
+    favoriteIds.length
+  ]);
 
   // Add debug info to console for easy inspection
   useEffect(() => {
