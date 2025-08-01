@@ -24,21 +24,29 @@ export function HomePage() {
   const [totalBrands, setTotalBrands] = useState<number>(0);
 
   const fetchHomeData = useCallback(async () => {
-    if (loading) return; // Prevent multiple simultaneous calls
+    console.log('🏠 HOME: fetchHomeData called, current loading state:', loading);
+    if (loading) {
+      console.log('🏠 HOME: Already loading, skipping fetch');
+      return; // Prevent multiple simultaneous calls
+    }
     
     try {
+      console.log('🏠 HOME: Starting data fetch...');
       setLoading(true);
       setError(null);
       
       // Use retry logic for all database operations
       await retrySupabaseOperation(async () => {
+        console.log('🏠 HOME: Inside retry operation, fetching total brands count...');
         const { count: brandsCount } = await supabase
           .from('brands')
           .select('*', { count: 'exact', head: true })
           .eq('approval_status', 'approved');
         
+        console.log('🏠 HOME: Total brands count received:', brandsCount);
         setTotalBrands(brandsCount || 0);
         
+        console.log('🏠 HOME: Fetching featured brands...');
         const { data: featuredData, error: featuredError } = await supabase
           .from('brands')
           .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
@@ -50,61 +58,76 @@ export function HomePage() {
           
         if (featuredError) throw featuredError;
         
+        console.log('🏠 HOME: Featured brands received:', featuredData?.length || 0);
+        
         // Randomly select 4 brands from the results
         if (featuredData && featuredData.length > 0) {
           const shuffled = [...featuredData].sort(() => Math.random() - 0.5);
           setFeaturedBrands(shuffled.slice(0, 4));
+          console.log('🏠 HOME: Featured brands set:', shuffled.slice(0, 4).map(b => b.name));
         } else {
+          console.log('🏠 HOME: No featured brands found');
           setFeaturedBrands([]);
         }
         
-        const { data: recentData, error: recentError } = await supabase
-          .from('brands')
-          .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
-          .eq('approval_status', 'approved')
-          .order('created_at', { ascending: false })
-          .limit(8);
-          
-        if (recentError) throw recentError;
-        setRecentBrands(recentData || []);
+        // Temporarily comment out recent brands and categories to isolate the issue
+        console.log('🏠 HOME: Skipping recent brands and categories for debugging');
+        setRecentBrands([]);
+        setCategories([]);
         
-        const { data: categoryData, error: categoryError } = await supabase
-          .from('brands')
-          .select('product_category')
-          .eq('approval_status', 'approved');
-          
-        if (categoryError) throw categoryError;
-        
-        if (categoryData) {
-          const uniqueCategories = Array.from(
-            new Set(categoryData.map(item => item.product_category))
-          ).filter(Boolean) as string[];
-          
-          setCategories(uniqueCategories.sort());
-        }
+        // const { data: recentData, error: recentError } = await supabase
+        //   .from('brands')
+        //   .select('id, name, creators, product_category, description, year_founded, type_of_influencer, brand_collab, logo_url, created_at')
+        //   .eq('approval_status', 'approved')
+        //   .order('created_at', { ascending: false })
+        //   .limit(8);
+        //   
+        // if (recentError) throw recentError;
+        // setRecentBrands(recentData || []);
+        // 
+        // const { data: categoryData, error: categoryError } = await supabase
+        //   .from('brands')
+        //   .select('product_category')
+        //   .eq('approval_status', 'approved');
+        //   
+        // if (categoryError) throw categoryError;
+        // 
+        // if (categoryData) {
+        //   const uniqueCategories = Array.from(
+        //     new Set(categoryData.map(item => item.product_category))
+        //   ).filter(Boolean) as string[];
+        //   
+        //   setCategories(uniqueCategories.sort());
+        // }
       }, 3, 2000);
       
+      console.log('🏠 HOME: All data fetching completed successfully');
+      
     } catch (err: any) {
-      console.error('Error fetching home data:', err);
+      console.error('🏠 HOME: Error fetching home data:', err);
       setError(err.message || 'Failed to connect to the database. Please check your internet connection and try again.');
     } finally {
+      console.log('🏠 HOME: Setting loading to false');
       setLoading(false);
     }
   }, [loading]);
 
   const checkAuth = useCallback(async () => {
+    console.log('🏠 HOME: checkAuth called');
     try {
       await retrySupabaseOperation(async () => {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('🏠 HOME: Auth check result:', !!user);
         setIsAuthenticated(!!user);
       }, 2, 1000);
     } catch (err) {
-      console.error('Auth check failed:', err);
+      console.error('🏠 HOME: Auth check failed:', err);
       setIsAuthenticated(false);
     }
   }, []);
 
   useEffect(() => {
+    console.log('🏠 HOME: useEffect triggered');
     checkAuth();
     fetchHomeData();
   }, [checkAuth, fetchHomeData]);
@@ -193,55 +216,6 @@ export function HomePage() {
           </div>
         </section>
         
-        <section className="mb-16">
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Browse by Category</h2>
-            <Link 
-              to="/explore" 
-              className="text-teal-400 hover:text-teal-300 transition-colors"
-            >
-              All Categories
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categories.slice(0, 8).map(category => {
-              const Icon = getCategoryIcon(category);
-              return (
-                <Link
-                  key={category}
-                  to={`/explore?category=${encodeURIComponent(category)}`}
-                  className="bg-gray-800/50 hover:bg-gray-700/50 transition-colors p-4 rounded-lg border border-gray-700/50 flex items-center gap-3"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center text-teal-400">
-                    {Icon && <Icon className="w-6 h-6" />}
-                  </div>
-                  <span className="text-gray-200 font-medium">{category}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-        
-        <section className="mb-16">
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-100 flex items-center gap-2">
-              <Calendar className="text-teal-400" size={24} />
-              Recently Added Brands
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {recentBrands.slice(0, 4).map(brand => (
-              <BrandCard 
-                key={brand.id} 
-                brand={brand}
-                isFavorited={false}
-                onFavoriteToggle={() => {}}
-              />
-            ))}
-          </div>
-        </section>
         
         {!isAuthenticated && (
           <section className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 text-center mb-8 border border-gray-700/50">
