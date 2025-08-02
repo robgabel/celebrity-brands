@@ -62,7 +62,6 @@ export function useBrandDataFetcher({
     try {
       setError(null);
       setLoading(true);
-      setDebugInfo(prev => ({ ...prev, semanticSearchStarted: true, semanticQuery }));
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -93,22 +92,12 @@ export function useBrandDataFetcher({
       }
 
       const matches = await response.json();
-      console.log('🔍 SEMANTIC SEARCH: Results received:', {
-        type: typeof matches,
-        isArray: Array.isArray(matches),
-        hasResults: !!matches.results,
-        matchesLength: matches.length,
-        resultsLength: matches.results?.length,
-        firstMatch: matches.results?.[0] || matches[0]
-      });
       
       setBrands(matches.results || matches);
       setTotalItems((matches.results || matches).length);
       setSemanticResults(matches.results || matches);
-      setDebugInfo(prev => ({ ...prev, semanticSearchCompleted: true, resultsCount: (matches.results || matches).length }));
     } catch (err: any) {
       console.error('Semantic search error:', err);
-      setDebugInfo(prev => ({ ...prev, semanticSearchError: err.message }));
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -116,6 +105,11 @@ export function useBrandDataFetcher({
   }, [semanticQuery]);
 
   const fetchBrands = useCallback(async () => {
+    if (isFetchingRef.current) {
+      console.log('🔄 FETCH BRANDS: Already fetching, skipping...');
+      return;
+    }
+
     console.log('🔍 FETCH BRANDS: Starting with parameters:', {
       debouncedSearchQuery,
       categoryFilter,
@@ -129,22 +123,7 @@ export function useBrandDataFetcher({
       isAdmin
     });
     
-    setDebugInfo({
-      fetchStarted: true,
-      timestamp: new Date().toISOString(),
-      parameters: {
-        debouncedSearchQuery,
-        categoryFilter,
-        founderFilter,
-        typeFilter,
-        sortBy,
-        showFavoritesOnly,
-        favoriteIds: favoriteIds.length,
-        currentPage,
-        itemsPerPage,
-        isAdmin
-      }
-    });
+    isFetchingRef.current = true;
     
     try {
       setLoading(true);
@@ -156,15 +135,12 @@ export function useBrandDataFetcher({
         .select('id, name, creators, product_category, description, year_founded, brand_collab, logo_url, created_at, approval_status, type_of_influencer', { count: 'exact' });
       
       console.log('🗄️ FETCH BRANDS: Base query created successfully');
-      setDebugInfo(prev => ({ ...prev, baseQueryCreated: true }));
       
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
         console.log('🔒 FETCH BRANDS: Added approval_status filter (not admin)');
-        setDebugInfo(prev => ({ ...prev, approvalFilterAdded: true }));
       } else {
         console.log('🔓 FETCH BRANDS: Admin access - no approval filter');
-        setDebugInfo(prev => ({ ...prev, adminAccess: true }));
       }
 
       if (debouncedSearchQuery) {
@@ -174,34 +150,31 @@ export function useBrandDataFetcher({
           `creators.ilike.${searchPattern}`
         );
         console.log('🔍 FETCH BRANDS: Added search filter:', searchPattern);
-        setDebugInfo(prev => ({ ...prev, searchFilterAdded: searchPattern }));
       }
 
       if (categoryFilter !== 'All Categories') {
         query = query.eq('product_category', categoryFilter);
         console.log('📂 FETCH BRANDS: Added category filter:', categoryFilter);
-        setDebugInfo(prev => ({ ...prev, categoryFilterAdded: categoryFilter }));
       }
 
       if (founderFilter !== 'All Founder Types') {
         query = query.eq('type_of_influencer', founderFilter);
         console.log('👤 FETCH BRANDS: Added founder filter:', founderFilter);
-        setDebugInfo(prev => ({ ...prev, founderFilterAdded: founderFilter }));
       }
 
       if (typeFilter !== 'All Types') {
         query = query.eq('brand_collab', typeFilter === 'Collab');
         console.log('🏷️ FETCH BRANDS: Added type filter:', typeFilter, '-> brand_collab:', typeFilter === 'Collab');
-        setDebugInfo(prev => ({ ...prev, typeFilterAdded: { typeFilter, brandCollab: typeFilter === 'Collab' } }));
       }
 
       if (showFavoritesOnly && favoriteIds.length > 0) {
         query = query.in('id', favoriteIds);
         console.log('❤️ FETCH BRANDS: Added favorites filter:', favoriteIds);
-        setDebugInfo(prev => ({ ...prev, favoritesFilterAdded: favoriteIds }));
       } else if (showFavoritesOnly && favoriteIds.length === 0) {
         console.log('⚠️ FETCH BRANDS: Favorites filter enabled but no favorite IDs available');
-        setDebugInfo(prev => ({ ...prev, favoritesFilterWarning: 'No favorite IDs available' }));
+        setBrands([]);
+        setTotalItems(0);
+        return;
       }
 
       const sortOptions = [
@@ -213,12 +186,10 @@ export function useBrandDataFetcher({
       const selectedSort = sortOptions.find(option => option.value === sortBy) || sortOptions[0];
       query = query.order(selectedSort.field, { ascending: selectedSort.ascending });
       console.log('📊 FETCH BRANDS: Added sort:', selectedSort);
-      setDebugInfo(prev => ({ ...prev, sortAdded: selectedSort }));
 
       const start = (currentPage - 1) * itemsPerPage;
       const end = start + itemsPerPage - 1;
       console.log('📄 FETCH BRANDS: Pagination range:', { start, end, currentPage, itemsPerPage });
-      setDebugInfo(prev => ({ ...prev, paginationRange: { start, end, currentPage, itemsPerPage } }));
       
       console.log('🚀 FETCH BRANDS: Executing Supabase query...');
       const queryStartTime = Date.now();
@@ -238,19 +209,8 @@ export function useBrandDataFetcher({
         } : 'none'
       });
 
-      setDebugInfo(prev => ({ 
-        ...prev, 
-        queryResults: {
-          dataLength: data?.length || 0,
-          error: error?.message || null,
-          count,
-          queryDuration,
-          firstBrand: data?.[0]
-        }
-      }));
       if (error) {
         console.error('❌ FETCH BRANDS: Supabase query error:', error);
-        setDebugInfo(prev => ({ ...prev, supabaseError: error }));
         throw error;
       }
 
@@ -262,27 +222,13 @@ export function useBrandDataFetcher({
         totalItems: count || 0
       });
       
-      setDebugInfo(prev => ({ 
-        ...prev, 
-        stateUpdated: true,
-        finalState: {
-          brandsCount: (data || []).length,
-          totalItems: count || 0
-        }
-      }));
       
     } catch (error: any) {
       console.error('💥 FETCH BRANDS: Error in fetchBrands:', error);
-      setDebugInfo(prev => ({ ...prev, fetchError: error.message }));
       
       // Enhanced error handling for network issues
       if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
         console.error('🌐 NETWORK ERROR: Connection to Supabase failed');
-        console.error('🔍 Debugging info:', {
-          supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-          hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-          timestamp: new Date().toISOString()
-        });
         
         setError('Unable to connect to the database. Please check your internet connection and try refreshing the page.');
       } else {
@@ -291,56 +237,8 @@ export function useBrandDataFetcher({
       
       if (error?.code === 'PGRST103' || error?.message?.includes('Requested range not satisfiable')) {
         console.log('🔄 FETCH BRANDS: Handling pagination range error...');
-        // Handle pagination range error
-        let countQuery = supabase
-          .from('brands')
-          .select('id', { count: 'exact', head: true });
-        
-        if (!isAdmin) {
-          countQuery = countQuery.eq('approval_status', 'approved');
-        }
-
-        if (debouncedSearchQuery) {
-          const searchPattern = `%${debouncedSearchQuery.toLowerCase()}%`;
-          countQuery = countQuery.or(
-            `name.ilike.${searchPattern},` +
-            `creators.ilike.${searchPattern}`
-          );
-        }
-
-        if (categoryFilter !== 'All Categories') {
-          countQuery = countQuery.eq('product_category', categoryFilter);
-        }
-
-        if (founderFilter !== 'All Founder Types') {
-          countQuery = countQuery.eq('type_of_influencer', founderFilter);
-        }
-
-        if (typeFilter !== 'All Types') {
-          countQuery = countQuery.eq('brand_collab', typeFilter === 'Collab');
-        }
-
-        if (showFavoritesOnly && favoriteIds.length > 0) {
-          countQuery = countQuery.in('id', favoriteIds);
-        }
-
-        try {
-          const { count } = await countQuery;
-          const actualCount = count || 0;
-          console.log('🔄 FETCH BRANDS: Actual count from recovery query:', actualCount);
-          setTotalItems(actualCount);
-          
-          const lastValidPage = Math.max(1, Math.ceil(actualCount / itemsPerPage));
-          
-          if (currentPage > lastValidPage) {
-            console.log('🔄 FETCH BRANDS: Redirecting to last valid page:', lastValidPage);
-            setCurrentPage(lastValidPage);
-            return;
-          }
-        } catch (countError) {
-          console.error('💥 FETCH BRANDS: Error getting count:', countError);
-          setError('Failed to load brands');
-        }
+        setCurrentPage(1);
+        return;
       }
     } finally {
       setLoading(false);
@@ -354,10 +252,11 @@ export function useBrandDataFetcher({
     typeFilter,
     sortBy,
     showFavoritesOnly,
-    favoriteIds.length,
+    favoriteIds,
     currentPage,
     itemsPerPage,
     isAdmin
+    setCurrentPage
   ]);
 
   const handleApprove = useCallback(async (brandId: number) => {
@@ -376,55 +275,15 @@ export function useBrandDataFetcher({
   }, [fetchBrands]);
 
   useEffect(() => {
-    // Prevent multiple simultaneous fetches
-    if (isFetchingRef.current) {
-      console.log('🔄 USE EFFECT: Already fetching, skipping...');
-      return;
-    }
-
     console.log('🔄 USE EFFECT: Triggered with semanticQuery:', semanticQuery);
-    setDebugInfo(prev => ({ ...prev, useEffectTriggered: true, semanticQuery }));
-    
-    isFetchingRef.current = true;
 
     if (semanticQuery) {
       console.log('🔄 USE EFFECT: Calling handleSemanticSearch');
-      handleSemanticSearch().finally(() => {
-        isFetchingRef.current = false;
-      });
+      handleSemanticSearch();
     } else {
       console.log('🔄 USE EFFECT: Calling fetchBrands');
-      fetchBrands().finally(() => {
-        isFetchingRef.current = false;
-      });
+      fetchBrands();
     }
-  }, [semanticQuery]); // Only depend on semanticQuery to prevent infinite loops
-
-  // Single useEffect for non-semantic search
-  useEffect(() => {
-    // Skip if semantic search or already fetching
-    if (semanticQuery || isFetchingRef.current) {
-      console.log('🔄 FILTER EFFECT: Skipping - semantic search or already fetching');
-      return;
-    }
-
-    if (isFetchingRef.current) {
-      console.log('🔄 FILTER EFFECT: Already fetching, skipping...');
-      return;
-    }
-
-    console.log('🔄 FILTER EFFECT: Triggered by filter change');
-    
-    isFetchingRef.current = true;
-    fetchBrands();
-  }, [fetchBrands, semanticQuery]);
-
-  // Add debug info to console for easy inspection
-  useEffect(() => {
-    if (Object.keys(debugInfo).length > 0) {
-      console.log('🐛 DEBUG INFO UPDATE:', debugInfo);
-    }
-  }, [debugInfo]);
   return {
     brands,
     totalItems,
