@@ -214,58 +214,101 @@ Deno.serve(async (req) => {
     const prompt = getPrompt(brand, version, notes);
 
     // Call appropriate API based on version
-    const apiUrl = version === 'v2' 
-      ? 'https://api.perplexity.ai/chat/completions'
-      : 'https://api.openai.com/v1/chat/completions';
-
-    const model = version === 'v2' ? 'sonar-deep-research' : 'gpt-4o';
+    let completion;
     
-    console.log(`🤖 Calling ${version === 'v2' ? 'Perplexity' : 'OpenAI'} API...`);
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: 'system',
-            content: version === 'v2' 
-              ? 'You are writing a clear, engaging, and factually accurate memo aimed at creators launching their own businesses. Use simple language appropriate for a 10th grade reading level. Your goal is to deliver a compelling, chronological story of a creator-led or celebrity-founded brand. Blend business insights with storytelling focused on entrepreneurship, market strategy, and brand growth. Avoid speculation; use verifiable data and reliable sources only. Use short paragraphs and bullets for easy scanning. Always respond with valid JSON only.'
-              : 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
-
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`❌ ${version === 'v2' ? 'Perplexity' : 'OpenAI'} API error:`, {
-        status: apiResponse.status,
-        statusText: apiResponse.statusText,
-        errorText: errorText.substring(0, 500)
+    if (version === 'v2') {
+      // Use Perplexity API for V2
+      console.log('🤖 Calling Perplexity API...');
+      const apiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'sonar-deep-research',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are writing a clear, engaging, and factually accurate memo aimed at creators launching their own businesses. Use simple language appropriate for a 10th grade reading level. Your goal is to deliver a compelling, chronological story of a creator-led or celebrity-founded brand. Blend business insights with storytelling focused on entrepreneurship, market strategy, and brand growth. Avoid speculation; use verifiable data and reliable sources only. Use short paragraphs and bullets for easy scanning. Always respond with valid JSON only.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
       });
-      
-      let errorMessage = `${version === 'v2' ? 'Perplexity' : 'OpenAI'} API error: ${apiResponse.status} ${apiResponse.statusText}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
-      } catch {
-        errorMessage = errorText || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
 
-    const completion = await apiResponse.json();
-    console.log(`✅ ${version === 'v2' ? 'Perplexity' : 'OpenAI'} response received`);
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('❌ Perplexity API error:', {
+          status: apiResponse.status,
+          statusText: apiResponse.statusText,
+          errorText: errorText.substring(0, 500)
+        });
+        
+        let errorMessage = `Perplexity API error: ${apiResponse.status} ${apiResponse.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      completion = await apiResponse.json();
+      console.log('✅ Perplexity response received');
+    } else {
+      // Use OpenAI API for V1
+      console.log('🤖 Calling OpenAI API...');
+      const apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('❌ OpenAI API error:', {
+          status: apiResponse.status,
+          statusText: apiResponse.statusText,
+          errorText: errorText.substring(0, 500)
+        });
+        
+        let errorMessage = `OpenAI API error: ${apiResponse.status} ${apiResponse.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      completion = await apiResponse.json();
+      console.log('✅ OpenAI response received');
+    }
 
     if (!completion.choices?.[0]?.message?.content) {
       console.error(`❌ No content in ${version === 'v2' ? 'Perplexity' : 'OpenAI'} response`);
