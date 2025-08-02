@@ -23,29 +23,39 @@ Product Category: ${brand.product_category}
 Type of Influencer: ${brand.type_of_influencer}`;
 
   if (version === 'v2') {
-    return `Create an inspiring "Zero to Hero" brand story for:
-${baseInfo}
+    return `Write an article of up to 700 words telling the complete story of the ${brand.name} brand led by ${brand.creators}.
 
-Create a compelling narrative that:
-1. Starts with the humble beginnings/origin story
-2. Details the key turning points and breakthrough moments
-3. Highlights major challenges overcome
-4. Showcases current success and market impact
-${notes ? '5. Specifically addresses the emphasized points\n' : ''}
+Start by introducing the founder(s), their relevant background, achievements, and early influences that shaped their approach to launching the brand.
 
-Focus on the transformative journey from initial concept to current success.
+Explain the motivations for starting the brand, including personal inspirations and identified market needs.
+
+Trace the formation of the company, strategic partnerships or collaborations, key individuals involved, initial product/service offerings, company structure, and go-to-market strategy.
+
+Outline how the brand expanded over time geographically, including key markets and distribution channels such as retail, online, or global partnerships.
+
+Include major milestones like product launches, awards, media moments, and pop culture influences that boosted growth and recognition.
+
+Discuss business performance metrics where available (sales, market share, growth rates) and operational challenges faced, explaining how these were addressed to maintain growth.
+
+Conclude with forward-looking insights on plans for product line expansion, new markets, sustainability or innovation initiatives, and strategic priorities for competitive advantage.
+
+${notes ? `IMPORTANT: Pay special attention to and emphasize: ${notes}\n\n` : ''}
+
+Ensure the narrative is clear, cohesive, and provides practical entrepreneurial and market strategy insights without speculation. Use reliable data to support the account. Format with short paragraphs and bullet points to enhance readability.
 
 Respond with a JSON object containing:
 {
-  "summary": "brief one-sentence summary of the brand's journey",
+  "summary": "brief one-sentence summary of the brand's journey and current status",
   "full_story": ["paragraph 1", "paragraph 2", "paragraph 3", ...],
-  "key_events": ["breakthrough moment 1", "challenge overcome 2", ...],
+  "key_events": ["milestone 1", "milestone 2", ...],
   "metrics": {
-    "initial_state": "description of starting point",
-    "breakthrough_moment": "key turning point",
-    "current_impact": "market presence and influence",
-    ${notes ? '"focus_area_impact": "analysis of emphasized points",' : ''}
-    "success_factors": "key elements that enabled success"
+    "founder_background": "relevant background and achievements",
+    "market_opportunity": "identified market needs and motivations",
+    "business_model": "company structure and go-to-market strategy",
+    "expansion_strategy": "geographic and distribution growth",
+    "performance_data": "business metrics and growth indicators",
+    ${notes ? '"focus_area_insights": "analysis of emphasized points",' : ''}
+    "future_outlook": "strategic priorities and growth plans"
   }
 }`;
   }
@@ -175,21 +185,27 @@ Deno.serve(async (req) => {
     console.log('📝 Generating prompt for version:', version);
     const prompt = getPrompt(brand, version, notes);
 
-    // Call OpenAI API
-    console.log('🤖 Calling OpenAI API...');
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call appropriate API based on version
+    const apiUrl = version === 'v2' 
+      ? 'https://api.perplexity.ai/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions';
+    
+    const model = version === 'v2' ? 'sonar-pro' : 'gpt-4o';
+    
+    console.log(`🤖 Calling ${version === 'v2' ? 'Perplexity' : 'OpenAI'} API...`);
+    const apiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: model,
         messages: [
           {
             role: 'system',
             content: version === 'v2' 
-              ? 'You are a brand storyteller specializing in inspirational "Zero to Hero" narratives that highlight transformative journeys and breakthrough moments. Always respond with valid JSON only.'
+              ? 'You are writing a clear, engaging, and factually accurate memo aimed at creators launching their own businesses. Use simple language appropriate for a 10th grade reading level. Your goal is to deliver a compelling, chronological story of a creator-led or celebrity-founded brand. Blend business insights with storytelling focused on entrepreneurship, market strategy, and brand growth. Avoid speculation; use verifiable data and reliable sources only. Use short paragraphs and bullets for easy scanning. Always respond with valid JSON only.'
               : 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
           },
           {
@@ -202,15 +218,15 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('❌ OpenAI API error:', {
-        status: openAIResponse.status,
-        statusText: openAIResponse.statusText,
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`❌ ${version === 'v2' ? 'Perplexity' : 'OpenAI'} API error:`, {
+        status: apiResponse.status,
+        statusText: apiResponse.statusText,
         errorText: errorText.substring(0, 500)
       });
       
-      let errorMessage = `OpenAI API error: ${openAIResponse.status} ${openAIResponse.statusText}`;
+      let errorMessage = `${version === 'v2' ? 'Perplexity' : 'OpenAI'} API error: ${apiResponse.status} ${apiResponse.statusText}`;
       try {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
@@ -220,12 +236,12 @@ Deno.serve(async (req) => {
       throw new Error(errorMessage);
     }
 
-    const completion = await openAIResponse.json();
-    console.log('✅ OpenAI response received');
+    const completion = await apiResponse.json();
+    console.log(`✅ ${version === 'v2' ? 'Perplexity' : 'OpenAI'} response received`);
 
     if (!completion.choices?.[0]?.message?.content) {
-      console.error('❌ No content in OpenAI response');
-      throw new Error('No content received from OpenAI');
+      console.error(`❌ No content in ${version === 'v2' ? 'Perplexity' : 'OpenAI'} response`);
+      throw new Error(`No content received from ${version === 'v2' ? 'Perplexity' : 'OpenAI'}`);
     }
 
     // Parse the story content
@@ -250,7 +266,7 @@ Deno.serve(async (req) => {
         parseError: parseError.message,
         content: completion.choices[0].message.content.substring(0, 500)
       });
-      throw new Error('Invalid response format from OpenAI');
+      throw new Error(`Invalid response format from ${version === 'v2' ? 'Perplexity' : 'OpenAI'}`);
     }
 
     // Update brand story in database with detailed error handling
