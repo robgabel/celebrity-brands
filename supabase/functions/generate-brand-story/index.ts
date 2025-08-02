@@ -1,5 +1,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 
+// JWT verification helper
+async function verifyJWT(authHeader: string | null, supabaseUrl: string, supabaseKey: string) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Missing or invalid authorization header');
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  // Create a client to verify the JWT
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      throw new Error('Invalid or expired token');
+    }
+    return user;
+  } catch (error) {
+    throw new Error('Authentication failed');
+  }
+}
+
 interface RequestData {
   brandId: number;
   notes?: string;
@@ -96,6 +118,28 @@ Deno.serve(async (req) => {
     }
 
     console.log('🚀 Brand story generation function started');
+
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openAiKey = Deno.env.get('OPENAI_API_KEY');
+
+    console.log('🔧 Environment check:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseKey: !!supabaseKey,
+      openAiKey: !!openAiKey
+    });
+
+    if (!supabaseUrl || !supabaseKey || !openAiKey) {
+      console.error('❌ Missing environment variables');
+      throw new Error('Missing required environment variables');
+    }
+
+    // Verify JWT authentication
+    console.log('🔐 Verifying user authentication...');
+    const authHeader = req.headers.get('Authorization');
+    const user = await verifyJWT(authHeader, supabaseUrl, supabaseKey);
+    console.log('✅ User authenticated:', { userId: user.id, email: user.email });
 
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
