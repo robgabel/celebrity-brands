@@ -103,14 +103,21 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
   }, []);
 
   const fetchBrandDetails = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    
     try {
       if (!brandSlug) {
         throw new Error('Brand ID is required');
       }
 
+      console.log('🔍 Fetching brand details for slug:', brandSlug);
+      
       // Try to parse as number first, if that fails treat as slug
       const brandId = parseInt(brandSlug);
       const isNumericId = !isNaN(brandId);
+      
+      console.log('🔍 Parsed brandId:', { brandId, isNumericId });
       
       let query = supabase.from('brands').select(`
         id,
@@ -132,28 +139,58 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
         updated_at
       `);
 
-      if (!isAdmin) {
-        query = query.eq('approval_status', 'approved');
-      }
+      // Always include approved brands, and if admin, also include pending
+      query = isAdmin 
+        ? query.in('approval_status', ['approved', 'pending'])
+        : query.eq('approval_status', 'approved');
 
       if (isNumericId) {
+        console.log('🔍 Searching by numeric ID:', brandId);
         query = query.eq('id', brandId);
       } else {
-        // Handle slug format - convert dashes to spaces and decode
-        const brandName = decodeURIComponent(brandSlug.replace(/-/g, ' '));
-        query = query.ilike('name', `%${brandName}%`);
+        // Handle slug format - try multiple approaches
+        console.log('🔍 Searching by slug:', brandSlug);
+        
+        // First try exact slug match (convert dashes to spaces)
+        const brandNameFromSlug = decodeURIComponent(brandSlug.replace(/-/g, ' '));
+        console.log('🔍 Converted slug to name:', brandNameFromSlug);
+        
+        // Try exact match first, then fuzzy match
+        const { data: exactMatch } = await query
+          .ilike('name', brandNameFromSlug)
+          .limit(1);
+        
+        if (exactMatch && exactMatch.length > 0) {
+          console.log('✅ Found exact match:', exactMatch[0].name);
+          setBrand(exactMatch[0]);
+          return;
+        }
+        
+        // If no exact match, try fuzzy search
+        query = query.ilike('name', `%${brandNameFromSlug}%`);
       }
 
-      const { data, error: queryError } = await query.maybeSingle();
+      console.log('🔍 Executing final query...');
+      const { data, error: queryError } = await query.limit(1);
 
-      if (queryError) throw queryError;
-
-      if (!data) {
-        console.error('Brand not found:', { brandSlug, isNumericId, brandId });
-        throw new Error(isAdmin ? 'Brand not found' : 'Brand not found or not approved');
+      if (queryError) {
+        console.error('❌ Query error:', queryError);
+        throw queryError;
       }
 
-      setBrand(data);
+      console.log('🔍 Query result:', { 
+        dataLength: data?.length, 
+        firstBrand: data?.[0]?.name 
+      });
+
+      if (!data || data.length === 0) {
+        console.error('❌ Brand not found:', { brandSlug, isNumericId, brandId });
+        throw new Error('Brand not found or not approved');
+      }
+
+      setBrand(Array.isArray(data) ? data[0] : data);
+      console.log('✅ Brand details set successfully');
+      
     } catch (err: any) {
       console.error('Error fetching brand details:', err);
       setError(err.message);
