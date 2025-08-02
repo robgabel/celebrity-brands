@@ -33,7 +33,16 @@ export function BrandCard({ brand, isFavorited, onFavoriteToggle }: BrandCardPro
     // Don't navigate if clicking buttons or links
     if (!(e.target as HTMLElement).closest('button')) {
       window.scrollTo(0, 0);
-      navigate(`/brands/${brand.id}`);
+      // Create a URL-friendly slug from the brand name, but fallback to ID
+      const slug = brand.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/-+/g, '-') // Replace multiple dashes with single dash
+        .trim();
+      
+      // Use the slug if it's meaningful, otherwise use the ID
+      navigate(`/brands/${slug || brand.id}`);
     }
   };
 

@@ -108,7 +108,10 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
         throw new Error('Brand ID is required');
       }
 
+      // Try to parse as number first, if that fails treat as slug
       const brandId = parseInt(brandSlug);
+      const isNumericId = !isNaN(brandId);
+      
       let query = supabase.from('brands').select(`
         id,
         name,
@@ -133,11 +136,12 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
         query = query.eq('approval_status', 'approved');
       }
 
-      if (!isNaN(brandId)) {
+      if (isNumericId) {
         query = query.eq('id', brandId);
       } else {
+        // Handle slug format - convert dashes to spaces and decode
         const brandName = decodeURIComponent(brandSlug.replace(/-/g, ' '));
-        query = query.ilike('name', brandName);
+        query = query.ilike('name', `%${brandName}%`);
       }
 
       const { data, error: queryError } = await query.maybeSingle();
@@ -145,6 +149,7 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
       if (queryError) throw queryError;
 
       if (!data) {
+        console.error('Brand not found:', { brandSlug, isNumericId, brandId });
         throw new Error(isAdmin ? 'Brand not found' : 'Brand not found or not approved');
       }
 
