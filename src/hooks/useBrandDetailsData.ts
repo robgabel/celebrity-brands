@@ -220,12 +220,23 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
     try {
       console.log('🚀 Starting story generation:', { version, brandId: brand.id, hasNotes: !!notes });
       
+      // Get the authenticated user's session token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        throw new Error('Failed to get user session');
+      }
+      
+      if (!session?.access_token) {
+        throw new Error('You must be logged in to generate brand stories');
+      }
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ 
