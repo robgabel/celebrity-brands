@@ -96,7 +96,7 @@ export function useBrandDataFetcher({
     } finally {
       setLoading(false);
     }
-  }, [semanticQuery]);
+  }, [semanticQuery, setBrands, setTotalItems, setSemanticResults, setError, setLoading]);
 
   const fetchBrands = useCallback(async () => {
     // Prevent multiple simultaneous fetches
@@ -174,7 +174,7 @@ export function useBrandDataFetcher({
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage, loading]);
+  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage]);
 
   const handleApprove = useCallback(async (brandId: number) => {
     try {
@@ -197,7 +197,7 @@ export function useBrandDataFetcher({
     } else {
       fetchBrands();
     }
-  }, [semanticQuery, handleSemanticSearch, fetchBrands]);
+  }, [semanticQuery, fetchBrands, handleSemanticSearch]);
 
   return {
     brands,
