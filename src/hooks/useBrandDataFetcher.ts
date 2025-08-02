@@ -49,12 +49,6 @@ export function useBrandDataFetcher({
   const [error, setError] = useState<string | null>(null);
   const [semanticResults, setSemanticResults] = useState<Brand[]>([]);
 
-  // Add debug state to track what's happening
-  const [debugInfo, setDebugInfo] = useState<any>({});
-  
-  // Add a ref to track if we're already fetching to prevent multiple simultaneous calls
-  const isFetchingRef = useRef(false);
-
   const handleSemanticSearch = useCallback(async () => {
     if (!semanticQuery) return;
 
@@ -105,35 +99,19 @@ export function useBrandDataFetcher({
   }, [semanticQuery]);
 
   const fetchBrands = useCallback(async () => {
-    console.log('🔍 FETCH BRANDS: Starting with parameters:', {
-      debouncedSearchQuery,
-      categoryFilter,
-      founderFilter,
-      typeFilter,
-      sortBy,
-      showFavoritesOnly,
-      favoriteIds: favoriteIds.length,
-      currentPage,
-      itemsPerPage,
-      isAdmin
-    });
+    // Prevent multiple simultaneous fetches
+    if (loading) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🗄️ FETCH BRANDS: Creating base query...');
       let query = supabase
         .from('brands')
         .select('id, name, creators, product_category, description, year_founded, brand_collab, logo_url, created_at, approval_status, type_of_influencer', { count: 'exact' });
       
-      console.log('🗄️ FETCH BRANDS: Base query created successfully');
-      
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
-        console.log('🔒 FETCH BRANDS: Added approval_status filter (not admin)');
-      } else {
-        console.log('🔓 FETCH BRANDS: Admin access - no approval filter');
       }
 
       if (debouncedSearchQuery) {
@@ -142,31 +120,26 @@ export function useBrandDataFetcher({
           `name.ilike.${searchPattern},` +
           `creators.ilike.${searchPattern}`
         );
-        console.log('🔍 FETCH BRANDS: Added search filter:', searchPattern);
       }
 
       if (categoryFilter !== 'All Categories') {
         query = query.eq('product_category', categoryFilter);
-        console.log('📂 FETCH BRANDS: Added category filter:', categoryFilter);
       }
 
       if (founderFilter !== 'All Founder Types') {
         query = query.eq('type_of_influencer', founderFilter);
-        console.log('👤 FETCH BRANDS: Added founder filter:', founderFilter);
       }
 
       if (typeFilter !== 'All Types') {
         query = query.eq('brand_collab', typeFilter === 'Collab');
-        console.log('🏷️ FETCH BRANDS: Added type filter:', typeFilter, '-> brand_collab:', typeFilter === 'Collab');
       }
 
       if (showFavoritesOnly && favoriteIds.length > 0) {
         query = query.in('id', favoriteIds);
-        console.log('❤️ FETCH BRANDS: Added favorites filter:', favoriteIds);
       } else if (showFavoritesOnly && favoriteIds.length === 0) {
-        console.log('⚠️ FETCH BRANDS: Favorites filter enabled but no favorite IDs available');
         setBrands([]);
         setTotalItems(0);
+        setLoading(false);
         return;
       }
 
@@ -178,66 +151,30 @@ export function useBrandDataFetcher({
 
       const selectedSort = sortOptions.find(option => option.value === sortBy) || sortOptions[0];
       query = query.order(selectedSort.field, { ascending: selectedSort.ascending });
-      console.log('📊 FETCH BRANDS: Added sort:', selectedSort);
 
       const start = (currentPage - 1) * itemsPerPage;
       const end = start + itemsPerPage - 1;
-      console.log('📄 FETCH BRANDS: Pagination range:', { start, end, currentPage, itemsPerPage });
       
-      console.log('🚀 FETCH BRANDS: Executing Supabase query...');
-      const queryStartTime = Date.now();
       const { data, error, count } = await query.range(start, end);
-      const queryEndTime = Date.now();
-      const queryDuration = queryEndTime - queryStartTime;
-
-      console.log('📊 FETCH BRANDS: Supabase query results:', {
-        data: data ? `${data.length} brands` : 'null',
-        error: error ? error.message : 'none',
-        count: count,
-        queryDuration: `${queryDuration}ms`,
-        firstBrand: data?.[0] ? {
-          id: data[0].id,
-          name: data[0].name,
-          approval_status: data[0].approval_status
-        } : 'none'
-      });
 
       if (error) {
-        console.error('❌ FETCH BRANDS: Supabase query error:', error);
         throw error;
       }
 
       setBrands(data || []);
       setTotalItems(count || 0);
       
-      console.log('✅ FETCH BRANDS: State updated successfully:', {
-        brandsCount: (data || []).length,
-        totalItems: count || 0
-      });
-      
-      
     } catch (error: any) {
-      console.error('💥 FETCH BRANDS: Error in fetchBrands:', error);
-      
-      // Enhanced error handling for network issues
-      if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
-        console.error('🌐 NETWORK ERROR: Connection to Supabase failed');
-        
-        setError('Unable to connect to the database. Please check your internet connection and try refreshing the page.');
-      } else {
-        setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-      }
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
       
       if (error?.code === 'PGRST103' || error?.message?.includes('Requested range not satisfiable')) {
-        console.log('🔄 FETCH BRANDS: Handling pagination range error...');
         setCurrentPage(1);
         return;
       }
     } finally {
       setLoading(false);
-      console.log('🏁 FETCH BRANDS: Loading completed, setting loading to false');
     }
-  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage]);
+  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage, loading]);
 
   const handleApprove = useCallback(async (brandId: number) => {
     try {
@@ -255,13 +192,9 @@ export function useBrandDataFetcher({
   }, [fetchBrands]);
 
   useEffect(() => {
-    console.log('🔄 USE EFFECT: Triggered with semanticQuery:', semanticQuery);
-
     if (semanticQuery) {
-      console.log('🔄 USE EFFECT: Calling handleSemanticSearch');
       handleSemanticSearch();
     } else {
-      console.log('🔄 USE EFFECT: Calling fetchBrands');
       fetchBrands();
     }
   }, [semanticQuery, handleSemanticSearch, fetchBrands]);
