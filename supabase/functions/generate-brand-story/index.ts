@@ -123,14 +123,16 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAiKey = Deno.env.get('OPENAI_API_KEY');
+    const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
 
     console.log('🔧 Environment check:', {
       supabaseUrl: !!supabaseUrl,
       supabaseKey: !!supabaseKey,
-      openAiKey: !!openAiKey
+      openAiKey: !!openAiKey,
+      perplexityKey: !!perplexityKey
     });
 
-    if (!supabaseUrl || !supabaseKey || !openAiKey) {
+    if (!supabaseUrl || !supabaseKey || !openAiKey || !perplexityKey) {
       console.error('❌ Missing environment variables');
       throw new Error('Missing required environment variables');
     }
@@ -222,7 +224,7 @@ Deno.serve(async (req) => {
       const apiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openAiKey}`,
+          'Authorization': `Bearer ${perplexityKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
