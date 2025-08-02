@@ -233,8 +233,8 @@ Deno.serve(async (req) => {
     const apiUrl = version === 'v2' 
       ? 'https://api.perplexity.ai/chat/completions'
       : 'https://api.openai.com/v1/chat/completions';
-    
-    const model = version === 'v2' ? 'sonar-pro' : 'gpt-4o';
+
+    const model = version === 'v2' ? 'sonar-deep-research' : 'gpt-4o';
     
     console.log(`🤖 Calling ${version === 'v2' ? 'Perplexity' : 'OpenAI'} API...`);
     const apiResponse = await fetch(apiUrl, {
