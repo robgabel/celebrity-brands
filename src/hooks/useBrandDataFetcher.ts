@@ -255,7 +255,7 @@ export function useBrandDataFetcher({
     favoriteIds,
     currentPage,
     itemsPerPage,
-    isAdmin
+    isAdmin,
     setCurrentPage
   ]);
 
