@@ -105,11 +105,6 @@ export function useBrandDataFetcher({
   }, [semanticQuery]);
 
   const fetchBrands = useCallback(async () => {
-    if (isFetchingRef.current) {
-      console.log('🔄 FETCH BRANDS: Already fetching, skipping...');
-      return;
-    }
-
     console.log('🔍 FETCH BRANDS: Starting with parameters:', {
       debouncedSearchQuery,
       categoryFilter,
@@ -122,8 +117,6 @@ export function useBrandDataFetcher({
       itemsPerPage,
       isAdmin
     });
-    
-    isFetchingRef.current = true;
     
     try {
       setLoading(true);
@@ -243,21 +236,8 @@ export function useBrandDataFetcher({
     } finally {
       setLoading(false);
       console.log('🏁 FETCH BRANDS: Loading completed, setting loading to false');
-      isFetchingRef.current = false;
     }
-  }, [
-    debouncedSearchQuery,
-    categoryFilter,
-    founderFilter,
-    typeFilter,
-    sortBy,
-    showFavoritesOnly,
-    favoriteIds,
-    currentPage,
-    itemsPerPage,
-    isAdmin,
-    setCurrentPage
-  ]);
+  }, [debouncedSearchQuery, categoryFilter, founderFilter, typeFilter, sortBy, showFavoritesOnly, favoriteIds, currentPage, itemsPerPage, isAdmin, setCurrentPage]);
 
   const handleApprove = useCallback(async (brandId: number) => {
     try {
