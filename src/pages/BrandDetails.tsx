@@ -279,7 +279,7 @@ export function BrandDetails() {
             <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
               <div className="flex items-center gap-2 mb-4">
                 <Newspaper className="w-5 h-5 text-gray-400" />
-                <h2 className="text-xl font-semibold text-gray-100">Recent News</h2>
+                <h2 className="text-xl font-semibold text-gray-100">Related News</h2>
               </div>
               
               {newsLoading ? (
