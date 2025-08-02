@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Calendar } from 'lucide-react';
@@ -22,16 +23,20 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [totalBrands, setTotalBrands] = useState<number>(0);
+  
+  // Use ref to prevent multiple simultaneous fetches
+  const isFetchingRef = useRef(false);
 
   const fetchHomeData = useCallback(async () => {
-    console.log('🏠 HOME: fetchHomeData called, current loading state:', loading);
-    if (loading) {
-      console.log('🏠 HOME: Already loading, skipping fetch');
-      return; // Prevent multiple simultaneous calls
+    console.log('🏠 HOME: fetchHomeData called, isFetching:', isFetchingRef.current);
+    if (isFetchingRef.current) {
+      console.log('🏠 HOME: Already fetching, skipping fetch');
+      return;
     }
     
     try {
       console.log('🏠 HOME: Starting data fetch...');
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
       
@@ -109,8 +114,9 @@ export function HomePage() {
     } finally {
       console.log('🏠 HOME: Setting loading to false');
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [loading]);
+  }, []);
 
   const checkAuth = useCallback(async () => {
     console.log('🏠 HOME: checkAuth called');
