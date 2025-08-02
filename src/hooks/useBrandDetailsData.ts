@@ -109,7 +109,25 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
       }
 
       const brandId = parseInt(brandSlug);
-      let query = supabase.from('brands').select('*');
+      let query = supabase.from('brands').select(`
+        id,
+        name,
+        creators,
+        product_category,
+        description,
+        year_founded,
+        year_discontinued,
+        type_of_influencer,
+        brand_collab,
+        logo_url,
+        homepage_url,
+        social_links,
+        approval_status,
+        brand_story,
+        last_story_update,
+        created_at,
+        updated_at
+      `);
 
       if (!isAdmin) {
         query = query.eq('approval_status', 'approved');
