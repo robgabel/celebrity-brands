@@ -221,30 +221,38 @@ Deno.serve(async (req) => {
     if (version === 'v2') {
       // Use Perplexity API for V2
       console.log('🤖 Calling Perplexity API...');
-      const apiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${perplexityKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'sonar-deep-research',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are writing a clear, engaging, and factually accurate memo aimed at creators launching their own businesses. Use simple language appropriate for a 10th grade reading level. Your goal is to deliver a compelling, chronological story of a creator-led or celebrity-founded brand. Blend business insights with storytelling focused on entrepreneurship, market strategy, and brand growth. Avoid speculation; use verifiable data and reliable sources only. Use short paragraphs and bullets for easy scanning. Always respond with valid JSON only.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-      });
+      let apiResponse;
+      try {
+        apiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${perplexityKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'sonar-deep-research',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are writing a clear, engaging, and factually accurate memo aimed at creators launching their own businesses. Use simple language appropriate for a 10th grade reading level. Your goal is to deliver a compelling, chronological story of a creator-led or celebrity-founded brand. Blend business insights with storytelling focused on entrepreneurship, market strategy, and brand growth. Avoid speculation; use verifiable data and reliable sources only. Use short paragraphs and bullets for easy scanning. Always respond with valid JSON only.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+          }),
+        });
+        console.log('🤖 Perplexity API call completed, status:', apiResponse.status);
+      } catch (fetchError) {
+        console.error('❌ Perplexity API fetch failed:', fetchError);
+        throw new Error(`Failed to connect to Perplexity API: ${fetchError.message}`);
+      }
 
       if (!apiResponse.ok) {
+        console.error('❌ Perplexity API returned error status:', apiResponse.status);
         const errorText = await apiResponse.text();
         console.error('❌ Perplexity API error:', {
           status: apiResponse.status,
@@ -262,35 +270,49 @@ Deno.serve(async (req) => {
         throw new Error(errorMessage);
       }
 
-      completion = await apiResponse.json();
+      try {
+        completion = await apiResponse.json();
+        console.log('✅ Perplexity response parsed successfully');
+      } catch (parseError) {
+        console.error('❌ Failed to parse Perplexity response:', parseError);
+        throw new Error('Invalid response format from Perplexity API');
+      }
       console.log('✅ Perplexity response received');
     } else {
       // Use OpenAI API for V1
       console.log('🤖 Calling OpenAI API...');
-      const apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-      });
+      let apiResponse;
+      try {
+        apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a brand analyst and storyteller, skilled at crafting compelling narratives about brands and their journeys. Always respond with valid JSON only.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+          }),
+        });
+        console.log('🤖 OpenAI API call completed, status:', apiResponse.status);
+      } catch (fetchError) {
+        console.error('❌ OpenAI API fetch failed:', fetchError);
+        throw new Error(`Failed to connect to OpenAI API: ${fetchError.message}`);
+      }
 
       if (!apiResponse.ok) {
+        console.error('❌ OpenAI API returned error status:', apiResponse.status);
         const errorText = await apiResponse.text();
         console.error('❌ OpenAI API error:', {
           status: apiResponse.status,
@@ -308,7 +330,13 @@ Deno.serve(async (req) => {
         throw new Error(errorMessage);
       }
 
-      completion = await apiResponse.json();
+      try {
+        completion = await apiResponse.json();
+        console.log('✅ OpenAI response parsed successfully');
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI response:', parseError);
+        throw new Error('Invalid response format from OpenAI API');
+      }
       console.log('✅ OpenAI response received');
     }
 
