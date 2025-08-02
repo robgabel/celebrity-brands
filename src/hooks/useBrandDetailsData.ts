@@ -212,6 +212,19 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
   const handleGenerateStory = useCallback(async (version: 'v1' | 'v2', notes?: string) => {
     if (!brand) return;
 
+    // Validate Supabase URL is available
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      const errorMessage = 'Supabase URL not configured. Please check your environment variables.';
+      setStoryError(errorMessage);
+      addToast({
+        message: errorMessage,
+        type: 'error',
+        duration: 8000
+      });
+      return;
+    }
+
     // Show toast notification that Petra is working
     const toastId = addToast({
       message: "Petra is researching and writing the brand story",
@@ -236,8 +249,11 @@ export function useBrandDetailsData(): UseBrandDetailsDataReturn {
         throw new Error('You must be logged in to generate brand stories');
       }
       
+      const functionUrl = `${supabaseUrl}/functions/v1/generate-brand-story`;
+      console.log('🌐 Calling Edge Function at:', functionUrl);
+      
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-brand-story`,
+        functionUrl,
         {
           method: 'POST',
           headers: {
