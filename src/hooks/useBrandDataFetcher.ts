@@ -284,6 +284,8 @@ export function useBrandDataFetcher({
       console.log('🔄 USE EFFECT: Calling fetchBrands');
       fetchBrands();
     }
+  }
+  )
   return {
     brands,
     totalItems,
