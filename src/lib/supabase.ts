@@ -172,4 +172,73 @@ export const initializeAuth = async () => {
 };
 
 // Auto-initialize auth when module loads
-initializeAuth().catch(console.error);
+initializeAuth().catch((error) => {
+  console.error('Failed to initialize auth:', error);
+  // Don't throw here to prevent app crash on load
+});
+
+// Add connection health check
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('system_config')
+      .select('key')
+      .limit(1);
+    
+    if (error) {
+      console.error('Supabase connection test failed:', error);
+      return false;
+    }
+    
+    console.log('Supabase connection test successful');
+    return true;
+  } catch (error) {
+    console.error('Supabase connection test error:', error);
+    return false;
+  }
+};
+
+// Enhanced auth initialization with connection retry
+export const initializeAuthWithRetry = async (maxRetries: number = 3): Promise<any> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Auth initialization attempt ${attempt}/${maxRetries}`);
+      
+      // First check basic connectivity
+      const isConnected = await checkSupabaseConnection();
+      if (!isConnected && attempt < maxRetries) {
+        console.log(`Connection failed, retrying in ${attempt * 2} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+        continue;
+      }
+      
+      // Try to get session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error(`Session error on attempt ${attempt}:`, error);
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        continue;
+      }
+      
+      console.log('Auth initialization successful');
+      authInitialized = true;
+      return session;
+    } catch (error) {
+      console.error(`Auth initialization attempt ${attempt} failed:`, error);
+      
+      if (attempt === maxRetries) {
+        console.error('All auth initialization attempts failed');
+        return null;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+    }
+  }
+  
+  return null;
+};
