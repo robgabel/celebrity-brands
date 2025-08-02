@@ -284,8 +284,8 @@ export function useBrandDataFetcher({
       console.log('🔄 USE EFFECT: Calling fetchBrands');
       fetchBrands();
     }
-  }
-  )
+  }, [semanticQuery, handleSemanticSearch, fetchBrands]);
+
   return {
     brands,
     totalItems,
