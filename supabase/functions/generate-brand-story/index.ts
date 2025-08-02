@@ -141,22 +141,6 @@ Deno.serve(async (req) => {
     const user = await verifyJWT(authHeader, supabaseUrl, supabaseKey);
     console.log('✅ User authenticated:', { userId: user.id, email: user.email });
 
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const openAiKey = Deno.env.get('OPENAI_API_KEY');
-
-    console.log('🔧 Environment check:', {
-      supabaseUrl: !!supabaseUrl,
-      supabaseKey: !!supabaseKey,
-      openAiKey: !!openAiKey
-    });
-
-    if (!supabaseUrl || !supabaseKey || !openAiKey) {
-      console.error('❌ Missing environment variables');
-      throw new Error('Missing required environment variables');
-    }
-
     // Get request data
     let requestData: RequestData;
     try {
